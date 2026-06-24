@@ -52,6 +52,10 @@ from openbb_fmp.models.historical_employees import FMPHistoricalEmployeesFetcher
 from openbb_fmp.models.historical_eps import FMPHistoricalEpsFetcher
 from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
 from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
+from openbb_fmp.models.historical_industry_pe import FMPHistoricalIndustryPEFetcher
+from openbb_fmp.models.historical_industry_performance import FMPHistoricalIndustryPerformanceFetcher
+from openbb_fmp.models.historical_sector_pe import FMPHistoricalSectorPEFetcher
+from openbb_fmp.models.historical_sector_performance import FMPHistoricalSectorPerformanceFetcher
 from openbb_fmp.models.income_statement import FMPIncomeStatementFetcher
 from openbb_fmp.models.income_statement_growth import FMPIncomeStatementGrowthFetcher
 from openbb_fmp.models.index_constituents import (
@@ -158,6 +162,74 @@ def test_fmp_index_historical_fetcher(credentials=test_credentials):
     fetcher = FMPIndexHistoricalFetcher()
     result = fetcher.test(params, credentials)
     assert result is None
+
+
+def test_fmp_historical_sector_performance_transform():
+    fetcher = FMPHistoricalSectorPerformanceFetcher()
+    data = fetcher.transform_data(
+        fetcher.transform_query(
+            {
+                "sector": "Technology",
+                "exchange": "NASDAQ",
+                "start_date": date(2024, 1, 1),
+                "end_date": date(2024, 1, 31),
+            }
+        ),
+        [
+            {"date": "2024-01-02", "sector": "Technology", "exchange": "NASDAQ", "averageChange": 1.5},
+            {"date": "2024-01-01", "sector": "Technology", "exchange": "NASDAQ", "averageChange": 1.0},
+        ],
+    )
+    assert [row.date.isoformat() for row in data] == ["2024-01-01", "2024-01-02"]
+    assert data[0].change_percent == 0.01
+
+
+def test_fmp_historical_industry_performance_transform():
+    fetcher = FMPHistoricalIndustryPerformanceFetcher()
+    data = fetcher.transform_data(
+        fetcher.transform_query(
+            {
+                "industry": "Software",
+                "exchange": "NASDAQ",
+                "start_date": date(2024, 1, 1),
+                "end_date": date(2024, 1, 31),
+            }
+        ),
+        [{"date": "2024-01-02", "industry": "Software", "exchange": "NASDAQ", "averageChange": 2.5}],
+    )
+    assert data[0].change_percent == 0.025
+
+
+def test_fmp_historical_sector_pe_transform():
+    fetcher = FMPHistoricalSectorPEFetcher()
+    data = fetcher.transform_data(
+        fetcher.transform_query(
+            {
+                "sector": "Technology",
+                "exchange": "NASDAQ",
+                "start_date": date(2024, 1, 1),
+                "end_date": date(2024, 1, 31),
+            }
+        ),
+        [{"date": "2024-01-02", "sector": "Technology", "exchange": "NASDAQ", "pe": 25.5}],
+    )
+    assert data[0].pe == 25.5
+
+
+def test_fmp_historical_industry_pe_transform():
+    fetcher = FMPHistoricalIndustryPEFetcher()
+    data = fetcher.transform_data(
+        fetcher.transform_query(
+            {
+                "industry": "Software",
+                "exchange": "NASDAQ",
+                "start_date": date(2024, 1, 1),
+                "end_date": date(2024, 1, 31),
+            }
+        ),
+        [{"date": "2024-01-02", "industry": "Software", "exchange": "NASDAQ", "pe": 34.2}],
+    )
+    assert data[0].pe == 34.2
 
 
 @pytest.mark.record_http

@@ -48,6 +48,10 @@ from openbb_fmp.models.historical_employees import FMPHistoricalEmployeesFetcher
 from openbb_fmp.models.historical_eps import FMPHistoricalEpsFetcher
 from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
 from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
+from openbb_fmp.models.historical_industry_pe import FMPHistoricalIndustryPEFetcher
+from openbb_fmp.models.historical_industry_performance import FMPHistoricalIndustryPerformanceFetcher
+from openbb_fmp.models.historical_sector_pe import FMPHistoricalSectorPEFetcher
+from openbb_fmp.models.historical_sector_performance import FMPHistoricalSectorPerformanceFetcher
 from openbb_fmp.models.income_statement import FMPIncomeStatementFetcher
 from openbb_fmp.models.income_statement_growth import FMPIncomeStatementGrowthFetcher
 from openbb_fmp.models.index_constituents import FMPIndexConstituentsFetcher
@@ -123,6 +127,10 @@ stock market information (news, currencies, and stock prices).""",
         "HistoricalEps": FMPHistoricalEpsFetcher,
         "HistoricalMarketCap": FmpHistoricalMarketCapFetcher,
         "HistoricalSplits": FMPHistoricalSplitsFetcher,
+        "HistoricalIndustryPE": FMPHistoricalIndustryPEFetcher,
+        "HistoricalIndustryPerformance": FMPHistoricalIndustryPerformanceFetcher,
+        "HistoricalSectorPE": FMPHistoricalSectorPEFetcher,
+        "HistoricalSectorPerformance": FMPHistoricalSectorPerformanceFetcher,
         "IncomeStatement": FMPIncomeStatementFetcher,
         "IncomeStatementGrowth": FMPIncomeStatementGrowthFetcher,
         "IndexConstituents": FMPIndexConstituentsFetcher,
