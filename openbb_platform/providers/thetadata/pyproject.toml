@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "openbb-thetadata"
+version = "1.0.0"
+description = "ThetaData extension for OpenBB"
+authors = ["OpenBB Team <hello@openbb.co>"]
+license = "AGPL-3.0-only"
+readme = "README.md"
+packages = [{ include = "openbb_thetadata" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4"
+openbb-core = "^1.6.10"
+thetadata = ">=1.0.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.plugins."openbb_provider_extension"]
+thetadata = "openbb_thetadata:thetadata_provider"
