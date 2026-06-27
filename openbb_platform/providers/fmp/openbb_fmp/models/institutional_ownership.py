@@ -2,6 +2,7 @@
 
 # pylint: disable=unused-argument
 
+from datetime import date as dateType
 from typing import Any
 
 from openbb_core.provider.abstract.fetcher import Fetcher
@@ -31,6 +32,14 @@ class FMPInstitutionalOwnershipQueryParams(InstitutionalOwnershipQueryParams):
         + " If not provided, the quarter previous to the current quarter is used.",
         ge=1,
         le=4,
+    )
+    start_date: dateType | None = Field(
+        default=None,
+        description="Start date for fetching historical quarterly summaries.",
+    )
+    end_date: dateType | None = Field(
+        default=None,
+        description="End date for fetching historical quarterly summaries.",
     )
 
 
@@ -175,6 +184,10 @@ class FMPInstitutionalOwnershipFetcher(
     ) -> list:
         """Return the raw data from the FMP endpoint."""
         # pylint: disable=import-outside-toplevel
+        import asyncio
+
+        from openbb_core.provider.utils.helpers import amake_request
+        from openbb_fmp.utils.helpers import response_callback
         from pandas import Timestamp, offsets
 
         api_key = credentials.get("fmp_api_key") if credentials else ""
@@ -196,9 +209,51 @@ class FMPInstitutionalOwnershipFetcher(
                 else current.quarter - 1 if current.quarter > 1 else 1
             )
 
+        base_url = (
+            "https://financialmodelingprep.com/stable/"
+            "institutional-ownership/symbol-positions-summary"
+        )
+
+        if query.start_date or query.end_date:
+            start = max(Timestamp(query.start_date or "2013-01-01"), Timestamp("2013-01-01"))
+            end = Timestamp(query.end_date or Timestamp("now").date())
+            periods = []
+            current = start + offsets.QuarterEnd()
+
+            while current <= end + offsets.QuarterEnd():
+                periods.append((current.year, current.quarter))
+                current += offsets.QuarterEnd()
+
+            periods = sorted(set(periods))
+
+            async def fetch_one(symbol: str, period_year: int, period_quarter: int):
+                url = (
+                    f"{base_url}?symbol={symbol}&year={period_year}"
+                    f"&quarter={period_quarter}&apikey={api_key}"
+                )
+                try:
+                    return await amake_request(
+                        url, response_callback=response_callback, **kwargs
+                    )
+                except Exception:
+                    return []
+
+            page_results = await asyncio.gather(
+                *[
+                    fetch_one(symbol, period_year, period_quarter)
+                    for symbol in symbols
+                    for period_year, period_quarter in periods
+                ]
+            )
+            return [
+                item
+                for result in page_results
+                if result
+                for item in (result if isinstance(result, list) else [result])
+            ]
+
         urls: list[str] = [
-            "https://financialmodelingprep.com/stable/institutional-ownership/symbol-positions-summary"
-            + f"?symbol={symbol}&year={year}&quarter={quarter}&apikey={api_key}"
+            f"{base_url}?symbol={symbol}&year={year}&quarter={quarter}&apikey={api_key}"
             for symbol in symbols
         ]
 

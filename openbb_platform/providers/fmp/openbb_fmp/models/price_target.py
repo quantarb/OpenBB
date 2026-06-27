@@ -65,30 +65,51 @@ class FMPPriceTargetFetcher(
         """Return the raw data from the FMP endpoint."""
         # pylint: disable=import-outside-toplevel
         import asyncio  # noqa
-        import math
         from warnings import warn
-        from openbb_fmp.utils.helpers import get_data_urls
+        from openbb_core.provider.utils.helpers import amake_request
+        from openbb_fmp.utils.helpers import response_callback
 
         api_key = credentials.get("fmp_api_key") if credentials else ""
         base_url = "https://financialmodelingprep.com/stable/price-target-news?"
         symbols = query.symbol.split(",")  # type: ignore
-        limit = query.limit if query.limit else 100
-        pages = math.ceil(limit / 100)
+        requested_limit = query.limit
+        page_limit = min(requested_limit, 100) if requested_limit else 100
         results: list[dict] = []
 
         async def get_one(symbol):
             """Get data for one symbol."""
-            urls = [
-                f"{base_url}symbol={symbol}&page={page}&limit={limit}&apikey={api_key}"
-                for page in range(pages)
-            ]
-            result = await get_data_urls(urls, **kwargs)
+            page = 0
+            symbol_results: list[dict] = []
 
-            if not result or len(result) == 0:
+            while True:
+                url = (
+                    f"{base_url}symbol={symbol}&page={page}"
+                    f"&limit={page_limit}&apikey={api_key}"
+                )
+                page_results = await amake_request(
+                    url, response_callback=response_callback, **kwargs
+                )
+
+                if not page_results:
+                    break
+
+                symbol_results.extend(page_results)
+
+                if len(page_results) < page_limit:
+                    break
+                if requested_limit and len(symbol_results) >= requested_limit:
+                    break
+                page += 1
+
+            if not symbol_results:
                 warn(f"Symbol Error: No data found for {symbol}")
 
-            if result:
-                results.extend(result)
+            if symbol_results:
+                results.extend(
+                    symbol_results[:requested_limit]
+                    if requested_limit
+                    else symbol_results
+                )
 
         await asyncio.gather(*[get_one(symbol) for symbol in symbols])
 

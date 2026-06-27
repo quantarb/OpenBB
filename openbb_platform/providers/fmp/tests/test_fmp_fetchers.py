@@ -50,12 +50,12 @@ from openbb_fmp.models.government_trades import FMPGovernmentTradesFetcher
 from openbb_fmp.models.historical_dividends import FMPHistoricalDividendsFetcher
 from openbb_fmp.models.historical_employees import FMPHistoricalEmployeesFetcher
 from openbb_fmp.models.historical_eps import FMPHistoricalEpsFetcher
-from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
-from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
 from openbb_fmp.models.historical_industry_pe import FMPHistoricalIndustryPEFetcher
 from openbb_fmp.models.historical_industry_performance import FMPHistoricalIndustryPerformanceFetcher
+from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
 from openbb_fmp.models.historical_sector_pe import FMPHistoricalSectorPEFetcher
 from openbb_fmp.models.historical_sector_performance import FMPHistoricalSectorPerformanceFetcher
+from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
 from openbb_fmp.models.income_statement import FMPIncomeStatementFetcher
 from openbb_fmp.models.income_statement_growth import FMPIncomeStatementGrowthFetcher
 from openbb_fmp.models.index_constituents import (
@@ -387,6 +387,74 @@ def test_fmp_institutional_ownership_fetcher(credentials=test_credentials):
     assert result is None
 
 
+def test_fmp_institutional_ownership_fetcher_fetches_date_window(monkeypatch):
+    """Test FMP institutional ownership fetches each quarter in a date window."""
+    import asyncio
+    from urllib.parse import parse_qs, urlparse
+
+    requested_urls = []
+
+    async def mock_amake_request(url, **kwargs):
+        requested_urls.append(url)
+        query = parse_qs(urlparse(url).query)
+        year = int(query["year"][0])
+        quarter = int(query["quarter"][0])
+        return [
+            {
+                "symbol": "AAPL",
+                "date": f"{year}-{quarter * 3:02d}-30",
+                "investorsHolding": 100 + quarter,
+                "lastInvestorsHolding": 100,
+                "investorsHoldingChange": quarter,
+                "totalInvested": 1000,
+                "lastTotalInvested": 900,
+                "totalInvestedChange": 100,
+                "ownershipPercent": 50,
+                "lastOwnershipPercent": 49,
+                "changeInOwnershipPercentage": 1,
+                "newPositions": 1,
+                "lastNewPositions": 0,
+                "newPositionsChange": 1,
+                "increasedPositions": 2,
+                "lastIncreasedPositions": 1,
+                "increasedPositionsChange": 1,
+                "closedPositions": 0,
+                "lastClosedPositions": 1,
+                "closedPositionsChange": -1,
+                "reducedPositions": 1,
+                "lastReducedPositions": 2,
+                "reducedPositionsChange": -1,
+                "totalCalls": 0,
+                "lastTotalCalls": 0,
+                "totalCallsChange": 0,
+                "totalPuts": 0,
+                "lastTotalPuts": 0,
+                "totalPutsChange": 0,
+                "putCallRatio": 0,
+                "lastPutCallRatio": 0,
+                "putCallRatioChange": 0,
+            }
+        ]
+
+    monkeypatch.setattr(
+        "openbb_core.provider.utils.helpers.amake_request",
+        mock_amake_request,
+    )
+
+    query = FMPInstitutionalOwnershipFetcher.transform_query(
+        {"symbol": "AAPL", "start_date": "2025-01-01", "end_date": "2025-06-30"}
+    )
+    data = asyncio.run(
+        FMPInstitutionalOwnershipFetcher.aextract_data(
+            query, {"fmp_api_key": "MOCK_API_KEY"}
+        )
+    )
+
+    assert len(data) >= 2
+    assert any("year=2025&quarter=1" in url for url in requested_urls)
+    assert any("year=2025&quarter=2" in url for url in requested_urls)
+
+
 @pytest.mark.record_http
 def test_fmp_insider_trading_fetcher(credentials=test_credentials):
     """Test FMP insider trading fetcher."""
@@ -395,6 +463,58 @@ def test_fmp_insider_trading_fetcher(credentials=test_credentials):
     fetcher = FMPInsiderTradingFetcher()
     result = fetcher.test(params, credentials)
     assert result is None
+
+
+def test_fmp_insider_trading_fetcher_paginates_full_symbol_history(monkeypatch):
+    """Test FMP insider trading fetches all symbol pages when no limit is set."""
+    import asyncio
+    from urllib.parse import parse_qs, urlparse
+
+    requested_urls = []
+
+    async def mock_amake_request(url, **kwargs):
+        requested_urls.append(url)
+        query = parse_qs(urlparse(url).query)
+        page = int(query["page"][0])
+
+        if page in {0, 1}:
+            return [
+                {
+                    "symbol": "AAPL",
+                    "filingDate": f"2024-01-{page + 1:02d}",
+                    "transactionDate": f"2024-01-{page + 1:02d}",
+                    "reportingName": f"Insider {page}-{i}",
+                    "transactionType": "P-Purchase",
+                }
+                for i in range(1000)
+            ]
+        if page == 2:
+            return [
+                {
+                    "symbol": "AAPL",
+                    "filingDate": "2024-01-03",
+                    "transactionDate": "2024-01-03",
+                    "reportingName": "Insider 2-0",
+                    "transactionType": "S-Sale",
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(
+        "openbb_core.provider.utils.helpers.amake_request",
+        mock_amake_request,
+    )
+
+    query = FMPInsiderTradingFetcher.transform_query({"symbol": "AAPL"})
+    data = asyncio.run(
+        FMPInsiderTradingFetcher.aextract_data(
+            query, {"fmp_api_key": "MOCK_API_KEY"}
+        )
+    )
+
+    assert len(data) == 2001
+    assert any("page=2" in url for url in requested_urls)
+    assert all("limit=1000" in url for url in requested_urls)
 
 
 @pytest.mark.record_http
@@ -425,6 +545,56 @@ def test_fmp_price_target_fetcher(credentials=test_credentials):
     fetcher = FMPPriceTargetFetcher()
     result = fetcher.test(params, credentials)
     assert result is None
+
+
+def test_fmp_price_target_fetcher_paginates_full_symbol_history(monkeypatch):
+    """Test FMP price target fetches all symbol pages when no limit is set."""
+    import asyncio
+    from urllib.parse import parse_qs, urlparse
+
+    requested_urls = []
+
+    async def mock_amake_request(url, **kwargs):
+        requested_urls.append(url)
+        query = parse_qs(urlparse(url).query)
+        page = int(query["page"][0])
+
+        if page in {0, 1}:
+            return [
+                {
+                    "symbol": "AAPL",
+                    "publishedDate": f"2024-01-{page + 1:02d}",
+                    "newsTitle": f"Price Target {page}-{i}",
+                    "analystCompany": "Test Firm",
+                    "priceTarget": 200 + page,
+                }
+                for i in range(100)
+            ]
+        if page == 2:
+            return [
+                {
+                    "symbol": "AAPL",
+                    "publishedDate": "2024-01-03",
+                    "newsTitle": "Price Target 2-0",
+                    "analystCompany": "Test Firm",
+                    "priceTarget": 205,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(
+        "openbb_core.provider.utils.helpers.amake_request",
+        mock_amake_request,
+    )
+
+    query = FMPPriceTargetFetcher.transform_query({"symbol": "AAPL"})
+    data = asyncio.run(
+        FMPPriceTargetFetcher.aextract_data(query, {"fmp_api_key": "MOCK_API_KEY"})
+    )
+
+    assert len(data) == 201
+    assert any("page=2" in url for url in requested_urls)
+    assert all("limit=100" in url for url in requested_urls)
 
 
 @pytest.mark.record_http
@@ -841,6 +1011,73 @@ def test_fmp_government_trades_fetcher(credentials=test_credentials):
     fetcher = FMPGovernmentTradesFetcher()
     result = fetcher.test(params, credentials)
     assert result is None
+
+
+def test_fmp_government_trades_fetcher_paginates_symbol(monkeypatch):
+    """Test FMP government trades fetches all symbol pages."""
+    import asyncio
+    from urllib.parse import parse_qs, urlparse
+
+    requested_urls = []
+
+    async def mock_amake_request(url, **kwargs):
+        requested_urls.append(url)
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        page = int(query["page"][0])
+        endpoint = parsed.path.rsplit("/", 1)[-1]
+
+        if endpoint == "house-trades" and page == 0:
+            return [
+                {
+                    "ticker": "AAPL",
+                    "disclosureDate": "2024-01-01",
+                    "transactionDate": "2023-12-29",
+                    "office": f"House Member {i}",
+                    "type": "Purchase",
+                }
+                for i in range(100)
+            ]
+        if endpoint == "house-trades" and page == 1:
+            return [
+                {
+                    "ticker": "AAPL",
+                    "disclosureDate": "2024-01-02",
+                    "transactionDate": "2023-12-30",
+                    "office": "House Member 100",
+                    "type": "Sale",
+                }
+            ]
+        if endpoint == "senate-trades" and page == 0:
+            return [
+                {
+                    "ticker": "AAPL",
+                    "disclosureDate": "2024-01-03",
+                    "transactionDate": "2023-12-31",
+                    "office": "Senate Member",
+                    "type": "Purchase",
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(
+        "openbb_core.provider.utils.helpers.amake_request",
+        mock_amake_request,
+    )
+
+    query = FMPGovernmentTradesFetcher.transform_query(
+        {"symbol": "AAPL", "chamber": "all"}
+    )
+    data = asyncio.run(
+        FMPGovernmentTradesFetcher.aextract_data(
+            query, {"fmp_api_key": "MOCK_API_KEY"}
+        )
+    )
+
+    assert len(data) == 102
+    assert any("house-trades?symbol=AAPL&page=1" in url for url in requested_urls)
+    assert all("limit=100" in url for url in requested_urls)
+    assert {entry["chamber"] for entry in data} == {"House", "Senate"}
 
 
 @pytest.mark.record_http

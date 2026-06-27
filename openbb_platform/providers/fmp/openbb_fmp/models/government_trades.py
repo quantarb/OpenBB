@@ -140,14 +140,11 @@ class FMPGovernmentTradesFetcher(
         }
         keys_to_rename = {"dateReceived": "date", "disclosureDate": "date"}
 
-        async def get_one(url):
-            """Get data for one URL."""
-            result = await amake_request(
-                url, response_callback=response_callback, **kwargs
-            )
-            processed_list: list = []
+        def process_entries(entries: list[dict], url: str) -> list[dict]:
+            """Normalize FMP government trades entries."""
+            processed_list: list[dict] = []
 
-            for entry in result:
+            for entry in entries:
                 new_entry = {
                     keys_to_rename.get(k, k): v
                     for k, v in entry.items()
@@ -156,11 +153,51 @@ class FMPGovernmentTradesFetcher(
                 new_entry["chamber"] = "Senate" if "senate-trades" in url else "House"
                 processed_list.append(new_entry)
 
+            return processed_list
+
+        async def get_one(url):
+            """Get data for one URL."""
+            result = await amake_request(
+                url, response_callback=response_callback, **kwargs
+            )
+            processed_list = process_entries(result, url)
+
             if not processed_list or len(processed_list) == 0:
                 warn(f"No data found for {url.replace(api_key, 'API_KEY')}")
 
             if processed_list:
                 results.extend(processed_list)
+
+        async def get_symbol_chamber(endpoint: str, symbol: str):
+            """Get all pages for one symbol and chamber."""
+            page = 0
+            page_limit = 100
+            seen = set()
+
+            while True:
+                url = (
+                    f"{base_url}{endpoint}?symbol={symbol}&page={page}"
+                    f"&limit={page_limit}&apikey={api_key}"
+                )
+                result = await amake_request(
+                    url, response_callback=response_callback, **kwargs
+                )
+                processed_list = process_entries(result, url)
+
+                if not processed_list:
+                    if page == 0:
+                        warn(f"No data found for {url.replace(api_key, 'API_KEY')}")
+                    break
+
+                for entry in processed_list:
+                    fs = frozenset(entry.items())
+                    if fs not in seen:
+                        seen.add(fs)
+                        results.append(entry)
+
+                if len(processed_list) < page_limit:
+                    break
+                page += 1
 
         urls_list: list = []
         base_url = "https://financialmodelingprep.com/stable/"
@@ -168,13 +205,14 @@ class FMPGovernmentTradesFetcher(
         try:
             if symbols:
                 for symbol in symbols:
-                    query.symbol = symbol
-                    url = [
-                        f"{base_url}{i}?symbol={symbol}&apikey={api_key}"
-                        for i in chamber_url_dict[query.chamber]
+                    for endpoint in chamber_url_dict[query.chamber]:
+                        urls_list.append((endpoint, symbol))
+                await asyncio.gather(
+                    *[
+                        get_symbol_chamber(endpoint, symbol)
+                        for endpoint, symbol in urls_list
                     ]
-                    urls_list.extend(url)
-                await asyncio.gather(*[get_one(url) for url in urls_list])
+                )
             else:
                 page = 0
                 seen = set()
