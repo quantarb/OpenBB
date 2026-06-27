@@ -18,6 +18,12 @@
 - Prefer one clear provider schema and one clear route contract; update downstream callers when route behavior changes.
 - Remove deprecated paths instead of keeping aliases, fallbacks, or duplicate implementations.
 
+## Build Vs Buy Policy
+
+- Prefer widely used, actively maintained third-party packages or small forks of proven projects over custom implementations.
+- When provider behavior can be handled by extending an established OpenBB provider pattern, do that instead of inventing new request, pagination, validation, or schema machinery.
+- Build from scratch only when no reliable package or upstream pattern fits the requirement; document that reason in the change.
+
 ## Performance Policy
 
 - Keep provider code async/vectorized where the OpenBB provider architecture supports it.
