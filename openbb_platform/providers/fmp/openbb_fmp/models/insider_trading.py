@@ -129,9 +129,8 @@ class FMPInsiderTradingFetcher(
     ) -> list:
         """Return the raw data from the FMP endpoint."""
         # pylint: disable=import-outside-toplevel
-        import math  # noqa
-        from openbb_core.provider.utils.helpers import get_querystring
-        from openbb_fmp.utils.helpers import get_data_urls, get_data_many
+        from openbb_core.provider.utils.helpers import amake_request, get_querystring
+        from openbb_fmp.utils.helpers import get_data_many, response_callback
 
         api_key = credentials.get("fmp_api_key") if credentials else ""
 
@@ -147,18 +146,36 @@ class FMPInsiderTradingFetcher(
             if query.transaction_type
             else None
         )
-        limit = query.limit if query.limit and query.limit <= 1000 else 1000
+        requested_limit = query.limit
+        page_limit = min(requested_limit, 1000) if requested_limit else 1000
         query = query.model_copy(update={"transaction_type": transaction_type})
         base_url = "https://financialmodelingprep.com/stable/insider-trading/search"
         query_str = get_querystring(query.model_dump(by_alias=True), ["page", "limit"])
 
-        pages = math.ceil(limit / 1000)
-        urls = [
-            f"{base_url}?{query_str}&page={page}&limit={limit}&apikey={api_key}"
-            for page in range(pages)
-        ]
+        results: list[dict] = []
+        page = 0
+        max_pages = 1000
 
-        return await get_data_urls(urls, **kwargs)  # type: ignore
+        while page < max_pages:
+            url = (
+                f"{base_url}?{query_str}&page={page}"
+                f"&limit={page_limit}&apikey={api_key}"
+            )
+            page_results = await amake_request(
+                url, response_callback=response_callback, **kwargs
+            )
+            if not page_results:
+                break
+
+            results.extend(page_results)
+
+            if len(page_results) < page_limit:
+                break
+            if requested_limit and len(results) >= requested_limit:
+                break
+            page += 1
+
+        return results[:requested_limit] if requested_limit else results
 
     @staticmethod
     def transform_data(
