@@ -33,3 +33,4 @@
 
 - Avoid merging `origin/develop` into `develop` when cleaning fork history. Rebase or reset intentionally, then use `git push --force-with-lease` only when rewriting this personal fork.
 - Keep duplicated self-merge commits out of `develop`.
+- This workspace is maintained by a single author. Push completed changes directly to the remote branch; do not create or wait on pull requests unless the user explicitly asks for one.
