@@ -49,6 +49,9 @@ from openbb_fmp.models.forward_eps_estimates import FMPForwardEpsEstimatesFetche
 from openbb_fmp.models.government_trades import FMPGovernmentTradesFetcher
 from openbb_fmp.models.historical_dividends import FMPHistoricalDividendsFetcher
 from openbb_fmp.models.historical_employees import FMPHistoricalEmployeesFetcher
+from openbb_fmp.models.historical_enterprise_value import (
+    FMPHistoricalEnterpriseValueFetcher,
+)
 from openbb_fmp.models.historical_eps import FMPHistoricalEpsFetcher
 from openbb_fmp.models.historical_industry_pe import FMPHistoricalIndustryPEFetcher
 from openbb_fmp.models.historical_industry_performance import FMPHistoricalIndustryPerformanceFetcher
@@ -995,6 +998,21 @@ def test_fmp_historical_market_cap_fetcher(credentials=test_credentials):
     }
 
     fetcher = FmpHistoricalMarketCapFetcher()
+    result = fetcher.test(params, credentials)
+    assert result is None
+
+
+@pytest.mark.record_http
+def test_fmp_historical_enterprise_value_fetcher(credentials=test_credentials):
+    """Test FMP Historical Enterprise Value Fetcher."""
+    params = {
+        "symbol": "AAPL",
+        "start_date": date(2024, 1, 1),
+        "end_date": date(2025, 12, 31),
+        "limit": 10,
+    }
+
+    fetcher = FMPHistoricalEnterpriseValueFetcher()
     result = fetcher.test(params, credentials)
     assert result is None
 
