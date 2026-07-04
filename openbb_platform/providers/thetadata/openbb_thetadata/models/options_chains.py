@@ -210,34 +210,47 @@ class ThetaDataOptionsChainsFetcher(
         end_date = query.end_date or query.date or start_date
 
         def _download() -> pd.DataFrame:
-            if query.include_greeks:
-                raw = client.option_history_greeks_eod(
-                    symbol=query.symbol,
-                    expiration=query.expiration,
-                    start_date=start_date,
-                    end_date=end_date,
-                    strike=query.strike,
-                    right=query.right,
-                    annual_dividend=query.annual_dividend,
-                    rate_type=query.rate_type,
-                    rate_value=query.rate_value,
-                    version=query.version,
-                    underlyer_use_nbbo=query.underlyer_use_nbbo,
-                    max_dte=query.max_dte,
-                    strike_range=query.strike_range,
-                )
-            else:
-                raw = client.option_history_eod(
-                    start_date=start_date,
-                    end_date=end_date,
-                    symbol=query.symbol,
-                    expiration=query.expiration,
-                    strike=query.strike,
-                    right=query.right,
-                    max_dte=query.max_dte,
-                    strike_range=query.strike_range,
-                )
-            return extract_records(raw)
+            request_dates = [start_date]
+            if query.expiration == "*" and start_date != end_date:
+                request_dates = [ts.date() for ts in pd.date_range(start_date, end_date, freq="B")]
+
+            frames: list[pd.DataFrame] = []
+            for request_date in request_dates:
+                request_start = request_date if query.expiration == "*" else start_date
+                request_end = request_date if query.expiration == "*" else end_date
+                if query.include_greeks:
+                    raw = client.option_history_greeks_eod(
+                        symbol=query.symbol,
+                        expiration=query.expiration,
+                        start_date=request_start,
+                        end_date=request_end,
+                        strike=query.strike,
+                        right=query.right,
+                        annual_dividend=query.annual_dividend,
+                        rate_type=query.rate_type,
+                        rate_value=query.rate_value,
+                        version=query.version,
+                        underlyer_use_nbbo=query.underlyer_use_nbbo,
+                        max_dte=query.max_dte,
+                        strike_range=query.strike_range,
+                    )
+                else:
+                    raw = client.option_history_eod(
+                        start_date=request_start,
+                        end_date=request_end,
+                        symbol=query.symbol,
+                        expiration=query.expiration,
+                        strike=query.strike,
+                        right=query.right,
+                        max_dte=query.max_dte,
+                        strike_range=query.strike_range,
+                    )
+                frame = extract_records(raw)
+                if not frame.empty:
+                    frames.append(frame)
+            if not frames:
+                return pd.DataFrame()
+            return pd.concat(frames, ignore_index=True, sort=False)
 
         frame = await to_thread(_download)
         if frame.empty:
