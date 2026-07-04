@@ -98,6 +98,40 @@ def test_transform_data_produces_standard_rows() -> None:
     assert data[0]["last_trade_price"] == 3.2
 
 
+def test_normalize_thetadata_option_chain_preserves_greeks_history_fields() -> None:
+    raw = pd.DataFrame(
+        [
+            {
+                "symbol": "GOOG",
+                "expiration": "2021-02-05",
+                "strike": 2075.0,
+                "right": "CALL",
+                "timestamp": "2021-02-03 16:00:00-05:00",
+                "bid": 10.0,
+                "ask": 11.0,
+                "implied_vol": 0.42,
+                "delta": 0.51,
+                "gamma": 0.02,
+                "theta": -0.1,
+                "vega": 0.3,
+                "rho": 0.04,
+                "underlying_price": 2070.07,
+            }
+        ]
+    )
+
+    frame = normalize_thetadata_option_chain(raw)
+
+    row = frame.iloc[0]
+    assert row["underlying_price"] == 2070.07
+    assert row["implied_volatility"] == 0.42
+    assert row["delta"] == 0.51
+    assert row["gamma"] == 0.02
+    assert row["theta"] == -0.1
+    assert row["vega"] == 0.3
+    assert row["rho"] == 0.04
+
+
 def test_aextract_data_uses_thetadata_client(monkeypatch) -> None:
     class FakeClient:
         def option_history_eod(self, **kwargs):
@@ -118,3 +152,51 @@ def test_aextract_data_uses_thetadata_client(monkeypatch) -> None:
     )
     assert len(rows) == 1
     assert rows[0]["symbol"] == "AAPL"
+
+
+def test_aextract_data_can_use_greeks_history_endpoint(monkeypatch) -> None:
+    calls: list[dict] = []
+
+    class FakeClient:
+        def option_history_greeks_eod(self, **kwargs):
+            calls.append(kwargs)
+            assert kwargs["symbol"] == "AAPL"
+            assert kwargs["start_date"] == date(2024, 11, 4)
+            assert kwargs["end_date"] == date(2024, 11, 4)
+            assert kwargs["rate_type"] == "sofr"
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAPL",
+                        "expiration": "2024-11-15",
+                        "strike": 220.0,
+                        "right": "CALL",
+                        "timestamp": "2024-11-04 16:00:00-05:00",
+                        "bid": 4.0,
+                        "ask": 4.2,
+                        "implied_vol": 0.25,
+                        "delta": 0.5,
+                        "gamma": 0.02,
+                        "theta": -0.03,
+                        "vega": 0.1,
+                        "rho": 0.01,
+                        "underlying_price": 222.0,
+                    }
+                ]
+            )
+
+    monkeypatch.setattr(
+        "openbb_thetadata.models.options_chains.resolve_thetadata_client",
+        lambda **kwargs: FakeClient(),
+    )
+    query = ThetaDataOptionsChainsFetcher.transform_query(
+        {"symbol": "AAPL", "date": date(2024, 11, 4), "include_greeks": True}
+    )
+    rows = asyncio.run(
+        ThetaDataOptionsChainsFetcher.aextract_data(query, {"thetadata_api_key": "test-key"})
+    )
+
+    assert len(rows) == 1
+    assert calls
+    assert rows[0]["underlying_price"] == 222.0
+    assert rows[0]["implied_vol"] == 0.25

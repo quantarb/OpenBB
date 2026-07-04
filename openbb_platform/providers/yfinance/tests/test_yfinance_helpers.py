@@ -152,3 +152,76 @@ def test_yf_download_no_session():
             assert (
                 "session" not in call_kwargs
             ), "yf.download should not be called with session parameter"
+
+
+def test_yf_download_can_keep_adjusted_close_for_unadjusted_history():
+    """Test that unadjusted history can retain Yahoo's adjusted close field."""
+    with patch("yfinance.download") as mock_download:
+        columns = pd.MultiIndex.from_tuples(
+            [
+                ("AAPL", "Open"),
+                ("AAPL", "High"),
+                ("AAPL", "Low"),
+                ("AAPL", "Close"),
+                ("AAPL", "Adj Close"),
+            ]
+        )
+        idx = pd.to_datetime(["2023-01-03"])
+        idx.name = "Date"
+        mock_download.return_value = pd.DataFrame(
+            [[100, 110, 90, 105, 101]],
+            columns=columns,
+            index=idx,
+        )
+
+        data = yf_download(
+            "AAPL",
+            start_date="2023-01-01",
+            end_date="2023-01-10",
+            keep_adjusted_close=True,
+        )
+
+        assert "adj_close" in data.columns
+        assert data.loc[0, "close"] == 105
+        assert data.loc[0, "adj_close"] == 101
+
+
+def test_yf_download_can_reverse_split_adjusted_ohlcv_for_unadjusted_history():
+    """Test that unadjusted history reverses Yahoo split-adjusted OHLCV."""
+    with patch("yfinance.download") as mock_download:
+        columns = pd.MultiIndex.from_tuples(
+            [
+                ("GOOG", "Open"),
+                ("GOOG", "High"),
+                ("GOOG", "Low"),
+                ("GOOG", "Close"),
+                ("GOOG", "Adj Close"),
+                ("GOOG", "Volume"),
+                ("GOOG", "Stock Splits"),
+            ]
+        )
+        idx = pd.to_datetime(["2021-02-03", "2022-07-18"])
+        idx.name = "Date"
+        mock_download.return_value = pd.DataFrame(
+            [
+                [100.0, 110.0, 90.0, 105.0, 101.0, 20_000, 0.0],
+                [110.0, 112.0, 108.0, 111.0, 111.0, 30_000, 20.0],
+            ],
+            columns=columns,
+            index=idx,
+        )
+
+        data = yf_download(
+            "GOOG",
+            start_date="2021-02-01",
+            end_date="2022-07-20",
+            actions=True,
+            keep_adjusted_close=True,
+            unadjust_splits=True,
+        )
+
+        assert data.loc[0, "open"] == 2000.0
+        assert data.loc[0, "close"] == 2100.0
+        assert data.loc[0, "adj_close"] == 101.0
+        assert data.loc[0, "volume"] == 1000.0
+        assert data.loc[1, "close"] == 111.0
