@@ -10,6 +10,7 @@
 
 - FMP routes used by target engineering must fetch complete symbol-level history by default unless the caller explicitly provides a `limit`.
 - ThetaData support belongs in the `openbb-thetadata` provider package under `openbb_platform/providers/thetadata`.
+- ThetaData option-chain routes used by this fork are full-chain-only for each requested symbol/date. Do not add or keep provider-side contract filters such as DTE, strike range, moneyness, expiration, right, bid/ask, minimum ask, liquidity, volume, or open interest. If downstream code needs a subset, it should filter after loading the complete chain from storage.
 - Downstream repos should not call vendor APIs directly to compensate for missing OpenBB provider behavior.
 
 ## Compatibility Policy

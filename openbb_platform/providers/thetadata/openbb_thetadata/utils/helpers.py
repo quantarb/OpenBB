@@ -51,8 +51,8 @@ def normalize_thetadata_option_chain(
     df: pd.DataFrame,
     *,
     snapshot_date: dateType | str | pd.Timestamp | None = None,
-    require_bid_ask: bool = True,
-    min_ask: float = 0.01,
+    require_bid_ask: bool = False,
+    min_ask: float = 0.0,
 ) -> pd.DataFrame:
     """Normalize ThetaData option history into OpenBB-compatible rows."""
     if df is None or df.empty:
@@ -127,8 +127,6 @@ def normalize_thetadata_option_chain(
         if "ask" not in out.columns:
             out["ask"] = pd.NA
         out = out.loc[out["bid"].notna() & out["ask"].notna() & (out["ask"] >= float(min_ask))].copy()
-    elif "ask" in out.columns:
-        out = out.loc[(out["ask"].isna()) | (out["ask"] >= float(min_ask))].copy()
 
     if out.empty:
         return out
