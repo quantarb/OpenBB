@@ -179,6 +179,33 @@ def test_aextract_data_uses_thetadata_client(monkeypatch) -> None:
     assert rows[0]["symbol"] == "AAPL"
 
 
+def test_aextract_data_splits_full_chain_ranges_by_day(monkeypatch) -> None:
+    calls: list[tuple[date, date]] = []
+
+    class FakeClient:
+        def option_history_eod(self, **kwargs):
+            calls.append((kwargs["start_date"], kwargs["end_date"]))
+            return _raw_frame().iloc[[0]].assign(created=f"{kwargs['start_date']} 17:16:56-05:00")
+
+    monkeypatch.setattr(
+        "openbb_thetadata.models.options_chains.resolve_thetadata_client",
+        lambda **kwargs: FakeClient(),
+    )
+    query = ThetaDataOptionsChainsFetcher.transform_query(
+        {"symbol": "AAPL", "start_date": date(2024, 11, 4), "end_date": date(2024, 11, 6)}
+    )
+    rows = asyncio.run(
+        ThetaDataOptionsChainsFetcher.aextract_data(query, {"thetadata_api_key": "test-key"})
+    )
+
+    assert calls == [
+        (date(2024, 11, 4), date(2024, 11, 4)),
+        (date(2024, 11, 5), date(2024, 11, 5)),
+        (date(2024, 11, 6), date(2024, 11, 6)),
+    ]
+    assert len(rows) == 3
+
+
 def test_aextract_data_can_use_greeks_history_endpoint(monkeypatch) -> None:
     calls: list[dict] = []
 
