@@ -12,12 +12,43 @@ from openbb_core.provider.standard_models.options_chains import (
     OptionsChainsQueryParams,
 )
 from openbb_core.provider.utils.errors import EmptyDataError
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from openbb_thetadata.utils.helpers import (
     extract_records,
     normalize_thetadata_option_chain,
     resolve_thetadata_client,
+)
+
+
+_UNSUPPORTED_CONTRACT_FILTERS = (
+    "dte",
+    "min_dte",
+    "max_dte",
+    "expiration",
+    "right",
+    "option_type",
+    "strike",
+    "strike_range",
+    "min_strike",
+    "max_strike",
+    "moneyness",
+    "min_moneyness",
+    "max_moneyness",
+    "max_abs_moneyness",
+    "delta",
+    "min_delta",
+    "max_delta",
+    "bid",
+    "ask",
+    "require_bid_ask",
+    "min_bid",
+    "min_ask",
+    "volume",
+    "min_volume",
+    "open_interest",
+    "min_open_interest",
+    "liquidity",
 )
 
 
@@ -85,13 +116,18 @@ class ThetaDataOptionsChainsQueryParams(OptionsChainsQueryParams):
         description="Return a pandas or polars dataframe from ThetaData.",
     )
     require_bid_ask: bool = Field(
-        default=True,
-        description="Drop rows without both bid and ask quotes.",
+        default=False,
+        description="Must remain False; ThetaData option-chain routes return full chains.",
     )
     min_ask: float = Field(
-        default=0.01,
-        description="Minimum ask price to keep when filtering quoteable rows.",
+        default=0.0,
+        description="Must remain 0.0; ThetaData option-chain routes return full chains.",
     )
+
+    @model_validator(mode="after")
+    def _reject_filtered_query(self) -> "ThetaDataOptionsChainsQueryParams":
+        _reject_contract_filters(self.model_dump())
+        return self
 
 
 class ThetaDataOptionsChainsData(OptionsChainsData):
@@ -141,6 +177,7 @@ class ThetaDataOptionsChainsFetcher(
     @staticmethod
     def transform_query(params: dict[str, Any]) -> ThetaDataOptionsChainsQueryParams:
         """Transform the query parameters."""
+        _reject_contract_filters(params)
         transformed = dict(params)
         today = datetime.now().date()
         if transformed.get("date") is None and transformed.get("start_date") is None and transformed.get("end_date") is None:
@@ -163,6 +200,7 @@ class ThetaDataOptionsChainsFetcher(
         """Return the raw data from ThetaData."""
         from asyncio import to_thread
 
+        _reject_contract_filters(query.model_dump())
         client = resolve_thetadata_client(
             credentials=credentials,
             dataframe_type=query.dataframe_type,
@@ -227,3 +265,33 @@ class ThetaDataOptionsChainsFetcher(
             raise EmptyDataError("No data was returned for the given symbol.")
 
         return ThetaDataOptionsChainsData.model_validate(frame.to_dict(orient="list"))
+
+
+def _reject_contract_filters(params: dict[str, Any]) -> None:
+    violations: list[str] = []
+    for key in _UNSUPPORTED_CONTRACT_FILTERS:
+        if key not in params:
+            continue
+        value = params[key]
+        if key in {"expiration", "strike"}:
+            if value not in (None, "", "*"):
+                violations.append(key)
+        elif key == "right":
+            if value not in (None, "", "both"):
+                violations.append(key)
+        elif key == "require_bid_ask":
+            if bool(value):
+                violations.append(key)
+        elif key == "min_ask":
+            if value not in (None, "", 0, 0.0):
+                violations.append(key)
+        elif value is not None:
+            violations.append(key)
+
+    if violations:
+        detail = ", ".join(sorted(violations))
+        raise ValueError(
+            "ThetaData option-chain requests are full-chain-only. "
+            f"Remove contract query filter(s): {detail}. "
+            "Filter contracts only after loading the complete chain."
+        )

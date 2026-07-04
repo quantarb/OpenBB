@@ -4,6 +4,7 @@ import asyncio
 from datetime import date
 
 import pandas as pd
+import pytest
 
 from openbb_thetadata.models.options_chains import (
     ThetaDataOptionsChainsFetcher,
@@ -65,7 +66,7 @@ def _raw_frame() -> pd.DataFrame:
 
 def test_normalize_thetadata_option_chain_builds_contract_symbol() -> None:
     frame = normalize_thetadata_option_chain(_raw_frame())
-    assert len(frame) == 1
+    assert len(frame) == 2
     row = frame.iloc[0]
     assert row["contract_symbol"] == "AAPL241115P00220000"
     assert row["underlying_symbol"] == "AAPL"
@@ -75,11 +76,35 @@ def test_normalize_thetadata_option_chain_builds_contract_symbol() -> None:
     assert row["mark"] == 3.2
 
 
+def test_normalize_thetadata_option_chain_can_filter_quoteable_rows_when_explicit() -> None:
+    frame = normalize_thetadata_option_chain(_raw_frame(), require_bid_ask=True, min_ask=0.01)
+    assert len(frame) == 1
+
+
 def test_transform_query_fills_single_day_defaults() -> None:
     query = ThetaDataOptionsChainsFetcher.transform_query({"symbol": "aapl"})
     assert query.symbol == "AAPL"
     assert query.start_date is not None
     assert query.end_date is not None
+
+
+def test_transform_query_rejects_contract_filters() -> None:
+    for params in (
+        {"symbol": "AAPL", "max_dte": 90},
+        {"symbol": "AAPL", "min_dte": 30},
+        {"symbol": "AAPL", "strike_range": 10},
+        {"symbol": "AAPL", "expiration": "2026-01-16"},
+        {"symbol": "AAPL", "right": "call"},
+        {"symbol": "AAPL", "require_bid_ask": True},
+        {"symbol": "AAPL", "min_ask": 0.01},
+    ):
+        with pytest.raises(ValueError, match="full-chain-only"):
+            ThetaDataOptionsChainsFetcher.transform_query(params)
+
+
+def test_query_model_rejects_direct_contract_filters() -> None:
+    with pytest.raises(ValueError, match="full-chain-only"):
+        ThetaDataOptionsChainsQueryParams(symbol="AAPL", max_dte=90)
 
 
 def test_transform_data_produces_standard_rows() -> None:
