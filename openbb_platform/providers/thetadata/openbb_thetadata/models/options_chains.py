@@ -56,6 +56,30 @@ class ThetaDataOptionsChainsQueryParams(OptionsChainsQueryParams):
         default=None,
         description="Strike window around the underlying price.",
     )
+    include_greeks: bool = Field(
+        default=False,
+        description="Use ThetaData's EOD Greeks history endpoint, which includes Greeks, IV, and the underlying price.",
+    )
+    annual_dividend: float | None = Field(
+        default=None,
+        description="Annual dividend input for ThetaData Greeks calculations.",
+    )
+    rate_type: str | None = Field(
+        default="sofr",
+        description="ThetaData interest-rate curve type for Greeks calculations.",
+    )
+    rate_value: float | None = Field(
+        default=None,
+        description="Explicit interest-rate value for ThetaData Greeks calculations.",
+    )
+    version: str | None = Field(
+        default="latest",
+        description="ThetaData Greeks endpoint version.",
+    )
+    underlyer_use_nbbo: bool = Field(
+        default=False,
+        description="Use underlying NBBO in ThetaData Greeks calculations.",
+    )
     dataframe_type: Literal["pandas", "polars"] = Field(
         default="pandas",
         description="Return a pandas or polars dataframe from ThetaData.",
@@ -100,6 +124,12 @@ class ThetaDataOptionsChainsData(OptionsChainsData):
         "change_percent": "change_percent",
         "mark": "mark",
         "theoretical_price": "theoretical_price",
+        "implied_volatility": "implied_volatility",
+        "delta": "delta",
+        "gamma": "gamma",
+        "theta": "theta",
+        "vega": "vega",
+        "rho": "rho",
     }
 
 
@@ -142,16 +172,33 @@ class ThetaDataOptionsChainsFetcher(
         end_date = query.end_date or query.date or start_date
 
         def _download() -> pd.DataFrame:
-            raw = client.option_history_eod(
-                start_date=start_date,
-                end_date=end_date,
-                symbol=query.symbol,
-                expiration=query.expiration,
-                strike=query.strike,
-                right=query.right,
-                max_dte=query.max_dte,
-                strike_range=query.strike_range,
-            )
+            if query.include_greeks:
+                raw = client.option_history_greeks_eod(
+                    symbol=query.symbol,
+                    expiration=query.expiration,
+                    start_date=start_date,
+                    end_date=end_date,
+                    strike=query.strike,
+                    right=query.right,
+                    annual_dividend=query.annual_dividend,
+                    rate_type=query.rate_type,
+                    rate_value=query.rate_value,
+                    version=query.version,
+                    underlyer_use_nbbo=query.underlyer_use_nbbo,
+                    max_dte=query.max_dte,
+                    strike_range=query.strike_range,
+                )
+            else:
+                raw = client.option_history_eod(
+                    start_date=start_date,
+                    end_date=end_date,
+                    symbol=query.symbol,
+                    expiration=query.expiration,
+                    strike=query.strike,
+                    right=query.right,
+                    max_dte=query.max_dte,
+                    strike_range=query.strike_range,
+                )
             return extract_records(raw)
 
         frame = await to_thread(_download)

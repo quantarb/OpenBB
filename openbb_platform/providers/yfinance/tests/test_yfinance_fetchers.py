@@ -2,6 +2,7 @@
 
 from datetime import date
 
+import pandas as pd
 import pytest
 from openbb_core.app.service.user_service import UserService
 from openbb_yfinance.models.active import YFActiveFetcher
@@ -172,6 +173,34 @@ def test_y_finance_equity_historical_fetcher(credentials=test_credentials):
     fetcher = YFinanceEquityHistoricalFetcher()
     result = fetcher.test(params, credentials)
     assert result is None
+
+
+def test_y_finance_equity_historical_supports_unadjusted_adj_close():
+    """Test unadjusted Yahoo history keeps raw close and adjusted close."""
+    query = YFinanceEquityHistoricalFetcher.transform_query(
+        {
+            "symbol": "AAPL",
+            "start_date": date(2023, 1, 1),
+            "end_date": date(2023, 1, 10),
+            "interval": "1d",
+            "adjustment": "unadjusted",
+        }
+    )
+    data = pd.DataFrame(
+        {
+            "date": ["2023-01-03"],
+            "open": [100.0],
+            "high": [110.0],
+            "low": [90.0],
+            "close": [105.0],
+            "adj_close": [101.0],
+        }
+    )
+
+    result = YFinanceEquityHistoricalFetcher.transform_data(query, data)
+
+    assert result[0].close == 105.0
+    assert result[0].adj_close == 101.0
 
 
 @pytest.mark.record_curl

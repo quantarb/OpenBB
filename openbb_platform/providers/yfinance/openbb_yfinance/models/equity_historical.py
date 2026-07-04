@@ -73,7 +73,7 @@ class YFinanceEquityHistoricalQueryParams(EquityHistoricalQueryParams):
         default=True,
         description="Include dividends and stock splits in results.",
     )
-    adjustment: Literal["splits_only", "splits_and_dividends"] = Field(
+    adjustment: Literal["splits_only", "splits_and_dividends", "unadjusted"] = Field(
         default="splits_only",
         description="The adjustment factor to apply. Default is splits only.",
     )
@@ -102,6 +102,10 @@ class YFinanceEquityHistoricalData(EquityHistoricalData):
     dividend: float | None = Field(
         default=None,
         description="Dividend amount (split-adjusted), if a dividend was paid.",
+    )
+    adj_close: float | None = Field(
+        default=None,
+        description="Adjusted close price, when returned by Yahoo Finance.",
     )
 
 
@@ -141,6 +145,8 @@ class YFinanceEquityHistoricalFetcher(
         from openbb_yfinance.utils.helpers import yf_download
 
         adjusted = query.adjustment == "splits_and_dividends"
+        keep_adjusted_close = query.adjustment == "unadjusted"
+        unadjust_splits = query.adjustment == "unadjusted"
         kwargs = {"auto_adjust": True, "back_adjust": True} if adjusted is True else {}
         # pylint: disable=protected-access
         data = yf_download(
@@ -150,7 +156,7 @@ class YFinanceEquityHistoricalFetcher(
             interval=INTERVALS_DICT[query.interval],  # type: ignore
             period=query._period,
             prepost=query.extended_hours,
-            actions=query.include_actions,
+            actions=query.include_actions or unadjust_splits,
             progress=query._progress,
             ignore_tz=query._ignore_tz,
             keepna=query._keepna,
@@ -158,6 +164,8 @@ class YFinanceEquityHistoricalFetcher(
             rounding=query._rounding,
             group_by=query._group_by,
             adjusted=adjusted,
+            keep_adjusted_close=keep_adjusted_close,
+            unadjust_splits=unadjust_splits,
             **kwargs,
         )
 

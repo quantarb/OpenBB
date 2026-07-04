@@ -65,11 +65,13 @@ def normalize_thetadata_option_chain(
             "symbol": "underlying_symbol",
             "right": "option_type",
             "created": "snapshot_date",
+            "timestamp": "snapshot_date",
             "last_trade": "last_trade_time",
             "close": "last_trade_price",
             "open": "open",
             "high": "high",
             "low": "low",
+            "implied_vol": "implied_volatility",
         }
     )
 
@@ -91,7 +93,23 @@ def normalize_thetadata_option_chain(
     )
     out["expiration"] = pd.to_datetime(out["expiration"], errors="coerce").dt.normalize()
     out["strike"] = pd.to_numeric(out["strike"], errors="coerce")
-    for col in ("bid", "ask", "open", "high", "low", "last_trade_price", "volume", "count"):
+    for col in (
+        "bid",
+        "ask",
+        "open",
+        "high",
+        "low",
+        "last_trade_price",
+        "volume",
+        "count",
+        "underlying_price",
+        "implied_volatility",
+        "delta",
+        "gamma",
+        "theta",
+        "vega",
+        "rho",
+    ):
         if col in out.columns:
             out[col] = pd.to_numeric(out[col], errors="coerce")
 
@@ -145,7 +163,8 @@ def normalize_thetadata_option_chain(
 
     out["contract_size"] = 100
     out["contract_symbol"] = out.apply(_build_contract_symbol, axis=1)
-    out["underlying_price"] = pd.NA
+    if "underlying_price" not in out.columns:
+        out["underlying_price"] = pd.NA
 
     column_order = [
         "underlying_symbol",

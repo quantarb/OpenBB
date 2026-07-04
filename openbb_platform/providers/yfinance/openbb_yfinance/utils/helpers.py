@@ -492,6 +492,8 @@ def yf_download(  # pylint: disable=too-many-positional-arguments
     rounding: bool = False,
     group_by: Literal["ticker", "column"] = "ticker",
     adjusted: bool = False,
+    keep_adjusted_close: bool = False,
+    unadjust_splits: bool = False,
     **kwargs: Any,
 ) -> "DataFrame":
     """Get yFinance OHLC data for any ticker and interval available."""
@@ -598,9 +600,11 @@ def yf_download(  # pylint: disable=too-many-positional-arguments
         data["date"] = data["date"].dt.strftime("%Y-%m-%d %H:%M:%S")  # type: ignore
     else:
         data["date"] = data["date"].dt.strftime("%Y-%m-%d")  # type: ignore
-    if adjusted is False:
+    if adjusted is False and keep_adjusted_close is False and "Adj Close" in data.columns:
         data = data.drop(columns=["Adj Close"])  # type: ignore
     data.columns = data.columns.str.lower().str.replace(" ", "_").to_list()  # type: ignore
+    if unadjust_splits is True:
+        data = reverse_yfinance_split_adjustment(data)
 
     # Remove columns with no information.
     for col in ["dividends", "capital_gains", "stock_splits"]:
@@ -608,6 +612,29 @@ def yf_download(  # pylint: disable=too-many-positional-arguments
             data = data.drop(columns=[col])
 
     return data  # type: ignore
+
+
+def reverse_yfinance_split_adjustment(data: "DataFrame") -> "DataFrame":
+    """Reverse Yahoo's split adjustment for OHLCV columns."""
+    # pylint: disable=import-outside-toplevel
+    from pandas import to_numeric
+
+    if data.empty or "stock_splits" not in data.columns:
+        return data
+
+    out = data.copy()
+    split_ratio = to_numeric(out["stock_splits"], errors="coerce").fillna(0.0)
+    split_factor = split_ratio.where(split_ratio > 0, 1.0)
+    future_factor = split_factor.iloc[::-1].cumprod().iloc[::-1] / split_factor
+    if not future_factor.ne(1.0).any():
+        return out
+
+    for col in ("open", "high", "low", "close"):
+        if col in out.columns:
+            out[col] = to_numeric(out[col], errors="coerce") * future_factor
+    if "volume" in out.columns:
+        out["volume"] = to_numeric(out["volume"], errors="coerce") / future_factor
+    return out
 
 
 def df_transform_numbers(data: "DataFrame", columns: list) -> "DataFrame":
