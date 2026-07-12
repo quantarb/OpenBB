@@ -51,7 +51,7 @@ class FMPCompanyNewsData(CompanyNewsData):
         "excerpt": "text",
     }
 
-    source: str = Field(description="Name of the news site.")
+    source: str | None = Field(default=None, description="Name of the news site.")
 
 
 class FMPCompanyNewsFetcher(
