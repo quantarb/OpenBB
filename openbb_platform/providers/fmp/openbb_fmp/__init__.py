@@ -47,6 +47,7 @@ from openbb_fmp.models.historical_dividends import FMPHistoricalDividendsFetcher
 from openbb_fmp.models.historical_employees import FMPHistoricalEmployeesFetcher
 from openbb_fmp.models.historical_eps import FMPHistoricalEpsFetcher
 from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
+from openbb_fmp.models.historical_ratings import FMPHistoricalRatingsFetcher
 from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
 from openbb_fmp.models.historical_industry_pe import FMPHistoricalIndustryPEFetcher
 from openbb_fmp.models.historical_industry_performance import FMPHistoricalIndustryPerformanceFetcher
@@ -126,6 +127,7 @@ stock market information (news, currencies, and stock prices).""",
         "HistoricalEmployees": FMPHistoricalEmployeesFetcher,
         "HistoricalEps": FMPHistoricalEpsFetcher,
         "HistoricalMarketCap": FmpHistoricalMarketCapFetcher,
+        "HistoricalRatings": FMPHistoricalRatingsFetcher,
         "HistoricalSplits": FMPHistoricalSplitsFetcher,
         "HistoricalIndustryPE": FMPHistoricalIndustryPEFetcher,
         "HistoricalIndustryPerformance": FMPHistoricalIndustryPerformanceFetcher,
