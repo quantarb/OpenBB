@@ -182,6 +182,20 @@ async def employee_count(
 
 
 @router.command(
+    model="HistoricalRatings",
+    examples=[APIEx(parameters={"symbol": "AAPL", "limit": 10, "provider": "fmp"})],
+)
+async def ratings_historical(
+    cc: CommandContext,
+    provider_choices: ProviderChoices,
+    standard_params: StandardParams,
+    extra_params: ExtraParams,
+) -> OBBject:
+    """Get historical company ratings and component scores."""
+    return await OBBject.from_query(Query(**locals()))
+
+
+@router.command(
     model="SearchAttributes",
     examples=[APIEx(parameters={"query": "ebitda", "provider": "intrinio"})],
 )

@@ -57,7 +57,9 @@ class FMPEconomicCalendarData(EconomicCalendarData):
     def empty_strings(cls, values):
         """Replace empty values with None."""
         return (
-            {k: (None if v in ("", 0) else v) for k, v in values.items()}
+            # Zero is a valid macro observation (for example, a 0.0% rate or
+            # a zero change).  Only empty strings represent missing values.
+            {k: (None if v == "" else v) for k, v in values.items()}
             if isinstance(values, dict)
             else values
         )
