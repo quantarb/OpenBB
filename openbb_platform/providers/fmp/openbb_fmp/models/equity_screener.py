@@ -224,7 +224,10 @@ class FMPEquityScreenerData(EquityScreenerData):
         description="The last annual amount dividend paid.",
         default=None,
     )
-    volume: int | None = Field(description="The current trading volume.", default=None)
+    # FMP occasionally returns fractional aggregate volume values. Keep the
+    # provider model permissive; downstream warehouse normalization can cast
+    # volume when an integer contract is required.
+    volume: float | None = Field(description="The current trading volume.", default=None)
     exchange: str | None = Field(
         description="The exchange code the asset trades on.",
         default=None,
