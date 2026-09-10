@@ -58,6 +58,12 @@ class FMPHistoricalDividendsData(HistoricalDividendsData):
     )
     frequency: str | None = Field(default=None, description="Frequency of the payment.")
 
+    @field_validator("record_date", "payment_date", "declaration_date", mode="before")
+    @classmethod
+    def _empty_date(cls, value):
+        """Missing optional vendor dates must not discard the full history."""
+        return None if isinstance(value, str) and not value.strip() else value
+
     @field_validator(
         "dividend_yield",
         mode="before",

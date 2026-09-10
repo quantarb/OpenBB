@@ -24,6 +24,8 @@ class FMPIncomeStatementQueryParams(IncomeStatementQueryParams):
     Source: https://financialmodelingprep.com/developer/docs/#Income-Statement
     """
 
+    limit: int | None = Field(default=1000, ge=1, description="Maximum statement history; default covers annual/quarterly history since 1900.")
+
     period: FinancialStatementPeriods = Field(
         default="annual",
         description=QUERY_DESCRIPTIONS.get("period", ""),
@@ -245,7 +247,7 @@ class FMPIncomeStatementFetcher(
         url = (
             base_url
             + f"?symbol={query.symbol}{'&period=' + query.period if query.period != 'ttm' else ''}"
-            + f"&limit={query.limit if query.limit else 5}"
+            + f"&limit={query.limit if query.limit else 1000}"
             + f"&apikey={api_key}"
         )
 
