@@ -285,15 +285,27 @@ class OBBject(Tagged, Generic[T]):
         return df
 
     def to_polars(self) -> "PolarsDataFrame":  # type: ignore
-        """Convert results field to polars dataframe."""
+        """Convert results directly to a Polars dataframe."""
         try:
-            from polars import from_pandas  # type: ignore # pylint: disable=import-outside-toplevel
+            import polars as pl  # type: ignore # pylint: disable=import-outside-toplevel
+            from openbb_core.app.utils import basemodel_to_polars
         except ImportError as exc:
             raise ImportError(
                 "Please install polars: `pip install polars pyarrow`  to use this method."
             ) from exc
-
-        return from_pandas(self.to_dataframe(index=None))
+        if self.results is None:
+            raise OpenBBError("Results not found.")
+        if isinstance(self.results, pl.DataFrame):
+            return self.results
+        if isinstance(self.results, list) and not self.results:
+            raise OpenBBError("Results not found.")
+        if isinstance(self.results, list) and isinstance(self.results[0], BaseModel):
+            return basemodel_to_polars(self.results, index=None)
+        if isinstance(self.results, BaseModel):
+            return basemodel_to_polars(self.results, index=None)
+        if isinstance(self.results, dict):
+            return pl.DataFrame(self.results, orient="col")
+        return pl.DataFrame(self.results)
 
     def to_numpy(self) -> "ndarray":
         """Convert results field to numpy array."""
