@@ -100,163 +100,163 @@ class FMPCashFlowStatementData(CashFlowStatementData):
         default=None,
         description="The currency in which the cash flow statement was reported.",
     )
-    net_income: int | None = Field(
+    net_income: float | None = Field(
         default=None,
         description="Net income.",
     )
-    depreciation_and_amortization: int | None = Field(
+    depreciation_and_amortization: float | None = Field(
         default=None,
         description="Depreciation and amortization.",
     )
-    deferred_income_tax: int | None = Field(
+    deferred_income_tax: float | None = Field(
         default=None,
         description="Deferred income tax.",
     )
-    stock_based_compensation: int | None = Field(
+    stock_based_compensation: float | None = Field(
         default=None,
         description="Stock-based compensation.",
     )
-    change_in_working_capital: int | None = Field(
+    change_in_working_capital: float | None = Field(
         default=None,
         description="Change in working capital.",
     )
-    change_in_account_receivables: int | None = Field(
+    change_in_account_receivables: float | None = Field(
         default=None,
         description="Change in account receivables.",
     )
-    change_in_inventory: int | None = Field(
+    change_in_inventory: float | None = Field(
         default=None,
         description="Change in inventory.",
     )
-    change_in_account_payable: int | None = Field(
+    change_in_account_payable: float | None = Field(
         default=None,
         description="Change in account payable.",
     )
-    change_in_other_working_capital: int | None = Field(
+    change_in_other_working_capital: float | None = Field(
         default=None,
         description="Change in other working capital.",
     )
-    change_in_other_non_cash_items: int | None = Field(
+    change_in_other_non_cash_items: float | None = Field(
         default=None,
         description="Change in other non-cash items.",
     )
-    net_cash_from_operating_activities: int | None = Field(
+    net_cash_from_operating_activities: float | None = Field(
         default=None,
         description="Net cash from operating activities.",
     )
-    purchase_of_property_plant_and_equipment: int | None = Field(
+    purchase_of_property_plant_and_equipment: float | None = Field(
         default=None,
         description="Purchase of property, plant and equipment.",
     )
-    acquisitions: int | None = Field(
+    acquisitions: float | None = Field(
         default=None,
         description="Acquisitions.",
     )
-    purchase_of_investment_securities: int | None = Field(
+    purchase_of_investment_securities: float | None = Field(
         default=None,
         description="Purchase of investment securities.",
     )
-    sale_and_maturity_of_investments: int | None = Field(
+    sale_and_maturity_of_investments: float | None = Field(
         default=None,
         description="Sale and maturity of investments.",
     )
-    other_investing_activities: int | None = Field(
+    other_investing_activities: float | None = Field(
         default=None,
         description="Other investing activities.",
     )
-    net_cash_from_investing_activities: int | None = Field(
+    net_cash_from_investing_activities: float | None = Field(
         default=None,
         description="Net cash from investing activities.",
     )
-    repayment_of_debt: int | None = Field(
+    repayment_of_debt: float | None = Field(
         default=None,
         description="Repayment of debt.",
     )
-    issuance_of_common_equity: int | None = Field(
+    issuance_of_common_equity: float | None = Field(
         default=None,
         description="Issuance of common equity.",
     )
-    repurchase_of_common_equity: int | None = Field(
+    repurchase_of_common_equity: float | None = Field(
         default=None,
         description="Repurchase of common equity.",
     )
-    net_common_equity_issuance: int | None = Field(
+    net_common_equity_issuance: float | None = Field(
         default=None,
         description="Net common equity issuance.",
     )
-    net_preferred_equity_issuance: int | None = Field(
+    net_preferred_equity_issuance: float | None = Field(
         default=None,
         description="Net preferred equity issuance.",
     )
-    net_equity_issuance: int | None = Field(
+    net_equity_issuance: float | None = Field(
         default=None,
         description="Net equity issuance.",
     )
-    short_term_net_debt_issuance: int | None = Field(
+    short_term_net_debt_issuance: float | None = Field(
         default=None,
         description="Short term net debt issuance.",
     )
-    long_term_net_debt_issuance: int | None = Field(
+    long_term_net_debt_issuance: float | None = Field(
         default=None,
         description="Long term net debt issuance.",
     )
-    net_debt_issuance: int | None = Field(
+    net_debt_issuance: float | None = Field(
         default=None,
         description="Net debt issuance.",
     )
-    common_dividends_paid: int | None = Field(
+    common_dividends_paid: float | None = Field(
         default=None,
         description="Payment of common dividends.",
     )
-    preferred_dividends_paid: int | None = Field(
+    preferred_dividends_paid: float | None = Field(
         default=None,
         description="Payment of preferred dividends.",
     )
-    net_dividends_paid: int | None = Field(
+    net_dividends_paid: float | None = Field(
         default=None,
         description="Net dividends paid.",
     )
-    other_financing_activities: int | None = Field(
+    other_financing_activities: float | None = Field(
         default=None,
         description="Other financing activities.",
     )
-    net_cash_from_financing_activities: int | None = Field(
+    net_cash_from_financing_activities: float | None = Field(
         default=None,
         description="Net cash from financing activities.",
     )
-    effect_of_exchange_rate_changes_on_cash: int | None = Field(
+    effect_of_exchange_rate_changes_on_cash: float | None = Field(
         default=None,
         description="Effect of exchange rate changes on cash.",
     )
-    net_change_in_cash_and_equivalents: int | None = Field(
+    net_change_in_cash_and_equivalents: float | None = Field(
         default=None,
         description="Net change in cash and equivalents.",
     )
-    cash_at_beginning_of_period: int | None = Field(
+    cash_at_beginning_of_period: float | None = Field(
         default=None,
         description="Cash at beginning of period.",
     )
-    cash_at_end_of_period: int | None = Field(
+    cash_at_end_of_period: float | None = Field(
         default=None,
         description="Cash at end of period.",
     )
-    operating_cash_flow: int | None = Field(
+    operating_cash_flow: float | None = Field(
         default=None,
         description="Operating cash flow.",
     )
-    capital_expenditure: int | None = Field(
+    capital_expenditure: float | None = Field(
         default=None,
         description="Capital expenditure.",
     )
-    income_taxes_paid: int | None = Field(
+    income_taxes_paid: float | None = Field(
         default=None,
         description="Income taxes paid.",
     )
-    interest_paid: int | None = Field(
+    interest_paid: float | None = Field(
         default=None,
         description="Interest paid.",
     )
-    free_cash_flow: int | None = Field(
+    free_cash_flow: float | None = Field(
         default=None,
     )
 

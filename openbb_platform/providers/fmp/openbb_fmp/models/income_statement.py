@@ -87,113 +87,113 @@ class FMPIncomeStatementData(IncomeStatementData):
         default=None,
         description="The currency in which the balance sheet was reported.",
     )
-    revenue: int | None = Field(
+    revenue: float | None = Field(
         default=None,
         description="Total revenue.",
     )
-    cost_of_revenue: int | None = Field(
+    cost_of_revenue: float | None = Field(
         default=None,
         description="Cost of revenue.",
     )
-    gross_profit: int | None = Field(
+    gross_profit: float | None = Field(
         default=None,
         description="Gross profit.",
     )
-    general_and_admin_expense: int | None = Field(
+    general_and_admin_expense: float | None = Field(
         default=None,
         description="General and administrative expenses.",
     )
-    research_and_development_expense: int | None = Field(
+    research_and_development_expense: float | None = Field(
         default=None,
         description="Research and development expenses.",
     )
-    selling_and_marketing_expense: int | None = Field(
+    selling_and_marketing_expense: float | None = Field(
         default=None,
         description="Selling and marketing expenses.",
     )
-    selling_general_and_admin_expense: int | None = Field(
+    selling_general_and_admin_expense: float | None = Field(
         default=None,
         description="Selling, general and administrative expenses.",
     )
-    other_expenses: int | None = Field(
+    other_expenses: float | None = Field(
         default=None,
         description="Other expenses.",
     )
-    total_operating_expenses: int | None = Field(
+    total_operating_expenses: float | None = Field(
         default=None,
         description="Total operating expenses.",
     )
-    cost_and_expenses: int | None = Field(
+    cost_and_expenses: float | None = Field(
         default=None,
         description="Cost and expenses.",
     )
-    interest_income: int | None = Field(
+    interest_income: float | None = Field(
         default=None,
         description="Interest income.",
     )
-    total_interest_expense: int | None = Field(
+    total_interest_expense: float | None = Field(
         default=None,
         description="Total interest expenses.",
     )
-    net_interest_income: int | None = Field(
+    net_interest_income: float | None = Field(
         default=None,
         description="Net interest income.",
     )
-    depreciation_and_amortization: int | None = Field(
+    depreciation_and_amortization: float | None = Field(
         default=None,
         description="Depreciation and amortization.",
     )
-    ebit: int | None = Field(
+    ebit: float | None = Field(
         default=None,
         description="Earnings before interest and taxes (EBIT).",
         title="EBIT",
     )
-    ebitda: int | None = Field(
+    ebitda: float | None = Field(
         default=None,
         description="EBITDA.",
         title="EBITDA",
     )
-    total_operating_income: int | None = Field(
+    total_operating_income: float | None = Field(
         default=None,
         description="Total operating income.",
     )
-    non_operating_income_excluding_interest: int | None = Field(
+    non_operating_income_excluding_interest: float | None = Field(
         default=None,
         description="Non-operating income excluding interest.",
     )
-    net_income_from_continuing_operations: int | None = Field(
+    net_income_from_continuing_operations: float | None = Field(
         default=None,
         description="Net income from continuing operations.",
     )
-    net_income_from_discontinued_operations: int | None = Field(
+    net_income_from_discontinued_operations: float | None = Field(
         default=None,
         description="Net income from discontinued operations.",
     )
-    total_other_income_expenses: int | None = Field(
+    total_other_income_expenses: float | None = Field(
         default=None,
         description="Total other income and expenses.",
     )
-    total_pre_tax_income: int | None = Field(
+    total_pre_tax_income: float | None = Field(
         default=None,
         description="Total pre-tax income.",
     )
-    income_tax_expense: int | None = Field(
+    income_tax_expense: float | None = Field(
         default=None,
         description="Income tax expense.",
     )
-    other_adjustments_to_net_income: int | None = Field(
+    other_adjustments_to_net_income: float | None = Field(
         default=None,
         description="Other adjustments to net income.",
     )
-    net_income_deductions: int | None = Field(
+    net_income_deductions: float | None = Field(
         default=None,
         description="Net income deductions.",
     )
-    consolidated_net_income: int | None = Field(
+    consolidated_net_income: float | None = Field(
         default=None,
         description="Consolidated net income.",
     )
-    bottom_line_net_income: int | None = Field(
+    bottom_line_net_income: float | None = Field(
         default=None,
         description="Bottom line net income.",
     )
@@ -205,11 +205,11 @@ class FMPIncomeStatementData(IncomeStatementData):
         default=None,
         description="Diluted earnings per share.",
     )
-    weighted_average_basic_shares_outstanding: int | None = Field(
+    weighted_average_basic_shares_outstanding: float | None = Field(
         default=None,
         description="Weighted average basic shares outstanding.",
     )
-    weighted_average_diluted_shares_outstanding: int | None = Field(
+    weighted_average_diluted_shares_outstanding: float | None = Field(
         default=None,
         description="Weighted average diluted shares outstanding.",
     )
