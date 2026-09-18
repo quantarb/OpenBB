@@ -10,7 +10,7 @@ from openbb_fmp.utils.helpers import get_data
 
 class FMPEconomicIndicatorsQueryParams(EconomicIndicatorsQueryParams):
     """Request complete recorded FMP history by default."""
-    start_date: date | None = date(1900, 1, 1)
+    start_date: date | None = None
 
 
 class FMPEconomicIndicatorsData(EconomicIndicatorsData):
@@ -20,7 +20,7 @@ class FMPEconomicIndicatorsData(EconomicIndicatorsData):
 class FMPEconomicIndicatorsFetcher(Fetcher[FMPEconomicIndicatorsQueryParams, list[FMPEconomicIndicatorsData]]):
     @staticmethod
     def transform_query(params: dict[str, Any]) -> FMPEconomicIndicatorsQueryParams:
-        return FMPEconomicIndicatorsQueryParams(**params)
+        return FMPEconomicIndicatorsQueryParams(**{**params, "start_date": params.get("start_date") or date(1900, 1, 1)})
 
     @staticmethod
     async def aextract_data(query: FMPEconomicIndicatorsQueryParams, credentials: dict[str, str] | None, **kwargs: Any) -> list[dict]:
