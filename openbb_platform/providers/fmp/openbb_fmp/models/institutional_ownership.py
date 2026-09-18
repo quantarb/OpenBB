@@ -79,15 +79,18 @@ class FMPInstitutionalOwnershipData(InstitutionalOwnershipData):
     total_invested_change: float = Field(
         description="Change in the total amount invested."
     )
-    ownership_percent: float = Field(
+    ownership_percent: float | None = Field(
+        default=None,
         description="Ownership percent.",
         json_schema_extra={"x-unit_measurement": "percent", "x-frontend_multiply": 100},
     )
-    last_ownership_percent: float = Field(
+    last_ownership_percent: float | None = Field(
+        default=None,
         description="Ownership percent in the last quarter.",
         json_schema_extra={"x-unit_measurement": "percent", "x-frontend_multiply": 100},
     )
-    ownership_percent_change: float = Field(
+    ownership_percent_change: float | None = Field(
+        default=None,
         description="Change in the ownership percent.",
         json_schema_extra={"x-unit_measurement": "percent", "x-frontend_multiply": 100},
     )
@@ -160,7 +163,7 @@ class FMPInstitutionalOwnershipData(InstitutionalOwnershipData):
     @classmethod
     def _normalize_percent(cls, v):
         """Normalize percent fields to be in decimal form."""
-        return v / 100 if v else None
+        return v / 100 if v is not None else None
 
 
 class FMPInstitutionalOwnershipFetcher(
