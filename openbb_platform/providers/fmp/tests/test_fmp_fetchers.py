@@ -517,6 +517,43 @@ def test_fmp_insider_trading_fetcher_paginates_full_symbol_history(monkeypatch):
     assert all("limit=1000" in url for url in requested_urls)
 
 
+def test_fmp_insider_trading_fetcher_stops_at_provider_maximum_page(monkeypatch):
+    """Test a full result set never requests FMP's invalid page 101."""
+    import asyncio
+    from urllib.parse import parse_qs, urlparse
+
+    requested_pages = []
+
+    async def mock_amake_request(url, **kwargs):
+        page = int(parse_qs(urlparse(url).query)["page"][0])
+        requested_pages.append(page)
+        if page > 100:
+            raise AssertionError(f"requested unsupported FMP page {page}")
+        row = {
+            "symbol": "GOOG",
+            "filingDate": "2024-01-01",
+            "transactionDate": "2024-01-01",
+            "reportingName": "Insider",
+            "transactionType": "P-Purchase",
+        }
+        return [row] * 1000
+
+    monkeypatch.setattr(
+        "openbb_core.provider.utils.helpers.amake_request",
+        mock_amake_request,
+    )
+
+    query = FMPInsiderTradingFetcher.transform_query({"symbol": "GOOG"})
+    data = asyncio.run(
+        FMPInsiderTradingFetcher.aextract_data(
+            query, {"fmp_api_key": "MOCK_API_KEY"}
+        )
+    )
+
+    assert len(data) == 101_000
+    assert requested_pages == list(range(101))
+
+
 @pytest.mark.record_http
 def test_fmp_equity_ownership_fetcher(credentials=test_credentials):
     """Test FMP equity ownership fetcher."""

@@ -154,9 +154,12 @@ class FMPInsiderTradingFetcher(
 
         results: list[dict] = []
         page = 0
-        max_pages = 1000
+        # FMP accepts page numbers 0 through 100 for this endpoint. Symbols
+        # with very large histories can fill every allowed page; stop at the
+        # provider boundary instead of making page 101 fail the entire fetch.
+        max_page = 100
 
-        while page < max_pages:
+        while page <= max_page:
             url = (
                 f"{base_url}?{query_str}&page={page}"
                 f"&limit={page_limit}&apikey={api_key}"
