@@ -20,6 +20,7 @@ class FMPEquitySearchData(EquitySearchData):
         default=None, description="Vendor type, if supplied; unknown is not equity certification."
     )
     exchange: str | None = None
+    raw_metadata: dict[str, Any] = Field(default_factory=dict, description="Complete provider directory row.")
 
 
 class FMPEquitySearchFetcher(Fetcher[FMPEquitySearchQueryParams, list[FMPEquitySearchData]]):
@@ -61,6 +62,7 @@ class FMPEquitySearchFetcher(Fetcher[FMPEquitySearchQueryParams, list[FMPEquityS
                     name=name,
                     instrument_type=record.get("type"),
                     exchange=record.get("exchangeShortName") or record.get("exchange"),
+                    raw_metadata=record,
                 )
             )
         return rows
