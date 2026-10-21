@@ -32,6 +32,7 @@ from openbb_fmp.models.equity_peers import FMPEquityPeersFetcher
 from openbb_fmp.models.equity_profile import FMPEquityProfileFetcher
 from openbb_fmp.models.equity_quote import FMPEquityQuoteFetcher
 from openbb_fmp.models.equity_screener import FMPEquityScreenerFetcher
+from openbb_fmp.models.equity_search import FMPEquitySearchFetcher
 from openbb_fmp.models.esg_score import FMPEsgScoreFetcher
 from openbb_fmp.models.etf_countries import FMPEtfCountriesFetcher
 from openbb_fmp.models.etf_equity_exposure import FMPEtfEquityExposureFetcher
@@ -113,6 +114,7 @@ stock market information (news, currencies, and stock prices).""",
         "EquityLosers": FMPLosersFetcher,
         "EquityQuote": FMPEquityQuoteFetcher,
         "EquityScreener": FMPEquityScreenerFetcher,
+        "EquitySearch": FMPEquitySearchFetcher,
         "EsgScore": FMPEsgScoreFetcher,
         "EtfCountries": FMPEtfCountriesFetcher,
         "EtfEquityExposure": FMPEtfEquityExposureFetcher,

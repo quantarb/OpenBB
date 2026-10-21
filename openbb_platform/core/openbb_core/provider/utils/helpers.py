@@ -50,9 +50,7 @@ def check_item(item: str, allowed: list[str], threshold: float = 0.75) -> None:
         If the item is not in the allowed list.
     """
     if item not in allowed:
-        similarities = map(
-            lambda c: (c, SequenceMatcher(None, item, c).ratio()), allowed
-        )
+        similarities = map(lambda c: (c, SequenceMatcher(None, item, c).ratio()), allowed)
         similar, score = max(similarities, key=lambda x: x[1])
         if score > threshold:
             raise ValueError(f"'{item}' is not available. Did you mean '{similar}'?")
@@ -139,9 +137,7 @@ def get_python_request_settings() -> dict:
         "cookies",
     ]
 
-    return {
-        k: v for k, v in http_settings.items() if v is not None and k in allowed_keys
-    }
+    return {k: v for k, v in http_settings.items() if v is not None and k in allowed_keys}
 
 
 def get_requests_session(**kwargs) -> "Session":
@@ -251,11 +247,7 @@ async def get_async_requests_session(**kwargs) -> ClientSession:
     if python_settings.get("proxy") or python_settings.get("verify_ssl") is False:
         python_settings["verify_ssl"] = None
         python_settings["ssl"] = False
-    elif (
-        python_settings.get("certfile")
-        or python_settings.get("cafile")
-        or os.environ.get("REQUESTS_CA_BUNDLE")
-    ):
+    elif python_settings.get("certfile") or python_settings.get("cafile") or os.environ.get("REQUESTS_CA_BUNDLE"):
         ca = python_settings.get("cafile") or os.environ.get("REQUESTS_CA_BUNDLE")
         cert = python_settings.get("certfile")
         key = python_settings.get("keyfile")
@@ -274,17 +266,11 @@ async def get_async_requests_session(**kwargs) -> ClientSession:
 
         python_settings["ssl"] = ssl_context
 
-    ssl_kwargs = {
-        k: v
-        for k, v in python_settings.items()
-        if k in ["ssl", "verify_ssl", "fingerprint"] and v is not None
-    }
+    ssl_kwargs = {k: v for k, v in python_settings.items() if k in ["ssl", "verify_ssl", "fingerprint"] and v is not None}
 
     # Merge the updated python_settings dict with the kwargs.
     if python_settings:
-        kwargs.update(
-            {k: v for k, v in python_settings.items() if not k.endswith("file")}
-        )
+        kwargs.update({k: v for k, v in python_settings.items() if not k.endswith("file")})
 
     # SSL settings get passed to the TCPConnector used by the session.
     connector = kwargs.pop("connector", None) or (
@@ -296,15 +282,11 @@ async def get_async_requests_session(**kwargs) -> ClientSession:
     # Add basic auth for proxies, if provided.
     p_auth = kwargs.pop("proxy_auth", [])
     if p_auth:
-        conn_kwargs["proxy_auth"] = aiohttp.BasicAuth(
-            *p_auth if isinstance(p_auth, (list, tuple)) else p_auth
-        )
+        conn_kwargs["proxy_auth"] = aiohttp.BasicAuth(*p_auth if isinstance(p_auth, (list, tuple)) else p_auth)
     # Add basic auth for server, if provided.
     s_auth = kwargs.pop("auth", [])
     if s_auth:
-        conn_kwargs["auth"] = aiohttp.BasicAuth(
-            *s_auth if isinstance(s_auth, (list, tuple)) else s_auth
-        )
+        conn_kwargs["auth"] = aiohttp.BasicAuth(*s_auth if isinstance(s_auth, (list, tuple)) else s_auth)
     # Add cookies to the session, if provided.
     _cookies = kwargs.pop("cookies", None)
     if _cookies:
@@ -318,11 +300,7 @@ async def get_async_requests_session(**kwargs) -> ClientSession:
         if v is None:
             continue
         if k == "timeout":
-            conn_kwargs["timeout"] = (
-                v
-                if isinstance(v, aiohttp.ClientTimeout)
-                else aiohttp.ClientTimeout(total=v)
-            )
+            conn_kwargs["timeout"] = v if isinstance(v, aiohttp.ClientTimeout) else aiohttp.ClientTimeout(total=v)
         elif k not in ("ssl", "verify_ssl", "fingerprint") and k in python_settings:
             conn_kwargs[k] = v
 
@@ -343,9 +321,7 @@ async def amake_request(
     url: str,
     method: Literal["GET", "POST"] = "GET",
     timeout: int = 10,
-    response_callback: (
-        Callable[[ClientResponse, ClientSession], Awaitable[dict | list[dict]]] | None
-    ) = None,
+    response_callback: (Callable[[ClientResponse, ClientSession], Awaitable[dict | list[dict]]] | None) = None,
     **kwargs,
 ) -> dict | list[dict]:
     """
@@ -375,9 +351,7 @@ async def amake_request(
 
     kwargs["timeout"] = kwargs.pop("preferences", {}).get("request_timeout", timeout)
 
-    response_callback = response_callback or (
-        lambda r, _: asyncio.ensure_future(r.json())
-    )
+    response_callback = response_callback or (lambda r, _: asyncio.ensure_future(r.json()))
 
     with_session = kwargs.pop("with_session", "session" in kwargs)
     session = kwargs.pop("session", await get_async_requests_session(**kwargs))
@@ -390,7 +364,11 @@ async def amake_request(
         if policy:
             admitted = policy[0]()
             if isawaitable(admitted):
-                await admitted
+                admitted = await admitted
+            if isinstance(admitted, (int, float)) and admitted > 0:
+                current = kwargs.get("timeout")
+                current = current if isinstance(current, (int, float)) else getattr(current, "total", None)
+                kwargs["timeout"] = min(current, admitted) if current and current > 0 else admitted
         try:
             response = await session.request(method, url, **kwargs)
             if policy:
@@ -412,9 +390,7 @@ async def amake_request(
 
 async def amake_requests(
     urls: str | list[str],
-    response_callback: (
-        Callable[[ClientResponse, ClientSession], Awaitable[dict | list[dict]]] | None
-    ) = None,
+    response_callback: (Callable[[ClientResponse, ClientSession], Awaitable[dict | list[dict]]] | None) = None,
     **kwargs,
 ):
     """Make multiple requests asynchronously.
@@ -452,10 +428,7 @@ async def amake_requests(
         ):
             is_exception = isinstance(result, Exception)
 
-            if is_exception and (
-                isinstance(result, UnauthorizedError)
-                or kwargs.get("raise_for_status", False)
-            ):
+            if is_exception and (isinstance(result, UnauthorizedError) or kwargs.get("raise_for_status", False)):
                 raise result  # type: ignore[misc]
 
             if is_exception and ret_exceptions:
@@ -519,15 +492,11 @@ def combine_certificates(cert: str, bundle: str | None = None) -> str:
 
         return combined_cert
     except Exception as e:  # pylint: disable=broad-except
-        warn(
-            f"An error occurred while handling the certificates file -> {e.__class__.__name__}: {e}"
-        )
+        warn(f"An error occurred while handling the certificates file -> {e.__class__.__name__}: {e}")
         return cert
 
 
-def make_request(
-    url: str, method: str = "GET", timeout: int = 10, **kwargs
-) -> "Response":
+def make_request(url: str, method: str = "GET", timeout: int = 10, **kwargs) -> "Response":
     """Abstract helper to make requests from a url with potential headers and params.
 
     Parameters
@@ -590,17 +559,10 @@ def to_snake_case(string: str) -> str:
     import re  # pylint: disable=import-outside-toplevel
 
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", string)
-    return (
-        re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1)
-        .lower()
-        .replace(" ", "_")
-        .replace("__", "_")
-    )
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower().replace(" ", "_").replace("__", "_")
 
 
-async def maybe_coroutine(
-    func: Callable[P, T | Awaitable[T]], /, *args: P.args, **kwargs: P.kwargs
-) -> T:
+async def maybe_coroutine(func: Callable[P, T | Awaitable[T]], /, *args: P.args, **kwargs: P.kwargs) -> T:
     """Check if a function is a coroutine and run it accordingly."""
     if not iscoroutinefunction(func):
         return cast(T, func(*args, **kwargs))
@@ -608,9 +570,7 @@ async def maybe_coroutine(
     return await func(*args, **kwargs)
 
 
-def run_async(
-    func: Callable[P, Awaitable[T]], /, *args: P.args, **kwargs: P.kwargs
-) -> T:
+def run_async(func: Callable[P, Awaitable[T]], /, *args: P.args, **kwargs: P.kwargs) -> T:
     """Run a coroutine function in a blocking context."""
     if not iscoroutinefunction(func):
         return cast(T, func(*args, **kwargs))
@@ -622,9 +582,7 @@ def run_async(
             portal.call(portal.stop)
 
 
-def filter_by_dates(
-    data: list[D], start_date: date | None = None, end_date: date | None = None
-) -> list[D]:
+def filter_by_dates(data: list[D], start_date: date | None = None, end_date: date | None = None) -> list[D]:
     """Filter data by dates."""
     if start_date is None and end_date is None:
         return data

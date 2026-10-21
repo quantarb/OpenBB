@@ -1,3 +1,4 @@
+# ruff: noqa: SIM117
 """No network: admission covers bulk requests/pages and restores default behavior."""
 
 import asyncio
@@ -9,39 +10,49 @@ from openbb_core.provider.utils.request_policy import policy_for, request_policy
 
 
 class Session:
+    """Offline HTTP session fixture."""
+
     def __init__(self, status=200):
         self.status = status
         self.calls = []
         self.closed = False
 
     async def request(self, method, url, **kwargs):
+        """Request."""
         self.calls.append(url)
 
         async def payload():
+            """Payload."""
             return [{"row": 1}]
 
         return SimpleNamespace(status=self.status, headers={"Retry-After": "12"}, json=payload)
 
     async def close(self):
+        """Close."""
         self.closed = True
 
 
 def test_bulk_requests_admitted_individually_without_exposing_query(monkeypatch):
+    """Bulk requests admitted individually without exposing query."""
     session = Session()
 
     async def factory(**kwargs):
+        """Return the offline session."""
         return session
 
     monkeypatch.setattr(helpers, "get_async_requests_session", factory)
     events = []
 
     def before():
+        """Before."""
         events.append("before")
 
     def after(status, retry_after):
+        """After."""
         events.append((status, retry_after))
 
     async def execute():
+        """Execute."""
         return await asyncio.gather(
             *[
                 helpers.amake_request(
@@ -65,14 +76,17 @@ def test_bulk_requests_admitted_individually_without_exposing_query(monkeypatch)
 
 
 def test_denied_request_never_sent_and_policy_restored(monkeypatch):
+    """Denied request never sent and policy restored."""
     session = Session()
 
     async def factory(**kwargs):
+        """Return the offline session."""
         return session
 
     monkeypatch.setattr(helpers, "get_async_requests_session", factory)
 
     def denied():
+        """Denied."""
         raise RuntimeError("budget exhausted")
 
     with pytest.raises(RuntimeError, match="budget"):
@@ -83,14 +97,17 @@ def test_denied_request_never_sent_and_policy_restored(monkeypatch):
 
 
 def test_429_recorded_before_provider_callback(monkeypatch):
+    """429 recorded before provider callback."""
     session = Session(429)
 
     async def factory(**kwargs):
+        """Return the offline session."""
         return session
 
     monkeypatch.setattr(helpers, "get_async_requests_session", factory)
 
     def after(status, retry_after):
+        """After."""
         if status == 429:
             assert retry_after == "12"
             raise RuntimeError("retry later")
@@ -103,15 +120,18 @@ def test_429_recorded_before_provider_callback(monkeypatch):
 
 
 def test_provider_callback_failure_is_visible_even_if_bulk_caller_discards_page(monkeypatch):
+    """Provider callback failure is visible even if bulk caller discards page."""
     session = Session()
 
     async def factory(**kwargs):
+        """Return the offline session."""
         return session
 
     monkeypatch.setattr(helpers, "get_async_requests_session", factory)
     statuses = []
 
     async def malformed(*_):
+        """Malformed."""
         raise ValueError("invalid vendor payload")
 
     with request_policy({"financialmodelingprep.com"}, lambda: None, lambda status, _: statuses.append(status)):
@@ -120,3 +140,26 @@ def test_provider_callback_failure_is_visible_even_if_bulk_caller_discards_page(
                 helpers.amake_request("https://financialmodelingprep.com/x", session=session, response_callback=malformed)
             )
     assert statuses == [200, 0]
+
+
+def test_admission_remaining_time_bounds_http_timeout(monkeypatch):
+    """Admission remaining time bounds http timeout."""
+    seen = []
+    session = Session()
+    original = session.request
+
+    async def request(*args, **kwargs):
+        """Request."""
+        seen.append(kwargs["timeout"])
+        return await original(*args, **kwargs)
+
+    session.request = request
+
+    async def factory(**kwargs):
+        """Return the offline session."""
+        return session
+
+    monkeypatch.setattr(helpers, "get_async_requests_session", factory)
+    with request_policy({"financialmodelingprep.com"}, lambda: 2.5, lambda *_: None):
+        asyncio.run(helpers.amake_request("https://financialmodelingprep.com/x", session=session, timeout=30))
+    assert seen == [2.5]

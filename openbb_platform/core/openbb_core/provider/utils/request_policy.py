@@ -2,10 +2,11 @@
 
 from contextlib import contextmanager
 from threading import Lock
+from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 _lock = Lock()
-_policy = None
+_state = SimpleNamespace(policy=None)
 
 
 @contextmanager
@@ -16,18 +17,18 @@ def request_policy(hosts, before, after):
     Status 0 records a transport/parsing failure; bulk consumers must not mistake
     partially successful pages for complete coverage. Callbacks receive no URLs.
     """
-    global _policy
     with _lock:
-        if _policy is not None:
+        if _state.policy is not None:
             raise RuntimeError("A request policy is already installed")
-        _policy = (frozenset(hosts), before, after)
+        _state.policy = (frozenset(hosts), before, after)
     try:
         yield
     finally:
         with _lock:
-            _policy = None
+            _state.policy = None
 
 
 def policy_for(url):
-    policy = _policy
+    """Policy for."""
+    policy = _state.policy
     return policy[1:] if policy and urlsplit(url).hostname in policy[0] else None
