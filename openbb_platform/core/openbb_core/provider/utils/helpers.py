@@ -383,8 +383,28 @@ async def amake_request(
     session = kwargs.pop("session", await get_async_requests_session(**kwargs))
 
     try:
-        response = await session.request(method, url, **kwargs)
-        return await response_callback(response, session)
+        from inspect import isawaitable
+        from openbb_core.provider.utils.request_policy import policy_for
+
+        policy = policy_for(url)
+        if policy:
+            admitted = policy[0]()
+            if isawaitable(admitted):
+                await admitted
+        try:
+            response = await session.request(method, url, **kwargs)
+            if policy:
+                recorded = policy[1](response.status, response.headers.get("Retry-After"))
+                if isawaitable(recorded):
+                    await recorded
+            return await response_callback(response, session)
+        except Exception:
+            if policy:
+                # A bulk caller may otherwise discard a failed page and return partial data.
+                recorded = policy[1](0, None)
+                if isawaitable(recorded):
+                    await recorded
+            raise
     finally:
         if not with_session:
             await session.close()
