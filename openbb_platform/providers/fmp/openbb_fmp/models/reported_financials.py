@@ -18,7 +18,9 @@ class FMPReportedFinancialsQueryParams(ReportedFinancialsQueryParams):
     """
 
     period: Literal["annual", "quarter"] = Field(default="annual")
-    statement_type: Literal["full"] = Field(default="full", description="Complete raw filing across statement families.")
+    statement_type: Literal["balance", "income", "cash", "full"] = Field(
+        default="balance", description="Raw statement family; full returns the complete original filing."
+    )
     limit: int = Field(default=1000, ge=1, le=1000)
 
 
@@ -51,8 +53,14 @@ class FMPReportedFinancialsFetcher(Fetcher[FMPReportedFinancialsQueryParams, lis
         from openbb_fmp.utils.helpers import get_data_many  # pylint: disable=import-outside-toplevel
 
         key = credentials.get("fmp_api_key", "") if credentials else ""
+        route = {
+            "balance": "balance-sheet-statement-as-reported",
+            "income": "income-statement-as-reported",
+            "cash": "cash-flow-statement-as-reported",
+            "full": "financial-statement-full-as-reported",
+        }[query.statement_type]
         url = (
-            "https://financialmodelingprep.com/stable/financial-statement-full-as-reported"
+            f"https://financialmodelingprep.com/stable/{route}"
             f"?symbol={query.symbol}&period={query.period}&limit={query.limit}&apikey={key}"
         )
         return await get_data_many(url, **kwargs)

@@ -27,7 +27,12 @@ async def test_full_raw_route_uses_bounded_query_and_existing_helper(monkeypatch
         return []
 
     monkeypatch.setattr("openbb_fmp.utils.helpers.get_data_many", get)
-    query = Model.transform_query({"symbol": "AAPL", "period": "quarter", "limit": 2})
+    query = Model.transform_query({"symbol": "AAPL", "period": "quarter", "limit": 2, "statement_type": "full"})
     assert await Model.aextract_data(query, {"fmp_api_key": "fixture"}) == []
     assert "/stable/financial-statement-full-as-reported?" in calls[0]
     assert "period=quarter" in calls[0] and "limit=2" in calls[0]
+
+
+def test_default_statement_family_matches_standard_sdk_default():
+    """Preserve the existing route's default balance-sheet selection."""
+    assert Model.transform_query({"symbol": "AAPL"}).statement_type == "balance"
