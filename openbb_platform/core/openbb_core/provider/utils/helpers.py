@@ -349,6 +349,13 @@ async def amake_request(
     if method.upper() not in ["GET", "POST"]:
         raise ValueError("Method must be GET or POST")
 
+    from openbb_core.provider.utils.request_journal import journal_for, request_identity
+    journal = journal_for(url)
+    identity = request_identity(url, method, kwargs.get("params")) if journal else None
+    if journal:
+        cached = journal.lookup(identity)
+        if cached is not None:
+            return cached["payload"]
     kwargs["timeout"] = kwargs.pop("preferences", {}).get("request_timeout", timeout)
 
     response_callback = response_callback or (lambda r, _: asyncio.ensure_future(r.json()))
@@ -371,14 +378,21 @@ async def amake_request(
                 current = current if isinstance(current, (int, float)) else getattr(current, "total", None)
                 kwargs["timeout"] = min(current, admitted) if current and current > 0 else admitted
         response = None
+        if journal:
+            journal.started(identity)
         try:
             response = await session.request(method, url, **kwargs)
             if policy:
                 recorded = policy[1](response.status, response.headers.get("Retry-After"))
                 if isawaitable(recorded):
                     await recorded
-            return await response_callback(response, session)
-        except Exception:
+            result = await response_callback(response, session)
+            if journal:
+                journal.succeeded(identity, result, response.status)
+            return result
+        except Exception as request_error:
+            if journal:
+                journal.failed(identity, request_error, getattr(response, "status", 0))
             if policy:
                 # A bulk caller may otherwise discard a failed page and return partial data.
                 recorded = policy[1](0, None)
@@ -555,21 +569,48 @@ def make_request(url: str, method: str = "GET", timeout: int = 10, **kwargs) -> 
     # Allow a custom session for caching, if desired
     _session = kwargs.pop("session", get_requests_session(**kwargs))
 
-    if method.upper() == "GET":
-        return _session.get(
-            url,
-            headers=headers,
-            timeout=timeout,
-            **kwargs,
-        )
-    if method.upper() == "POST":
-        return _session.post(
-            url,
-            headers=headers,
-            timeout=timeout,
-            **kwargs,
-        )
-    raise ValueError("Method must be GET or POST")
+    from openbb_core.provider.utils.request_journal import journal_for, request_identity
+    from openbb_core.provider.utils.request_policy import policy_for
+    journal = journal_for(url)
+    identity = request_identity(url, method, kwargs.get("params")) if journal else None
+    if journal:
+        cached = journal.lookup(identity)
+        if cached is not None:
+            from requests import Response
+            import json
+            response = Response()
+            response.status_code = 200
+            response._content = json.dumps(cached["payload"]).encode()
+            response.encoding = "utf-8"
+            return response
+    policy = policy_for(url)
+    if policy:
+        admitted = policy[0]()
+        if isinstance(admitted, (int, float)) and admitted > 0:
+            timeout = min(timeout, admitted)
+    if method.upper() not in ("GET", "POST"):
+        raise ValueError("Method must be GET or POST")
+    if journal:
+        journal.started(identity)
+    response = None
+    try:
+        response = _session.request(method, url, headers=headers, timeout=timeout, **kwargs)
+        if policy:
+            policy[1](response.status_code, response.headers.get("Retry-After"))
+        if journal:
+            if response.status_code != 200:
+                raise RuntimeError("Vendor HTTP status " + str(response.status_code))
+            journal.succeeded(identity, response.json(), response.status_code)
+        return response
+    except Exception as request_error:
+        if journal:
+            journal.failed(identity, request_error, getattr(response, "status_code", 0))
+        if policy:
+            policy[1](0, None)
+        raise
+    finally:
+        if response is not None and policy and policy[2] is not None:
+            policy[2](len(response.content))
 
 
 def to_snake_case(string: str) -> str:
