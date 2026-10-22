@@ -358,6 +358,7 @@ async def amake_request(
 
     try:
         from inspect import isawaitable
+
         from openbb_core.provider.utils.request_policy import policy_for
 
         policy = policy_for(url)
@@ -369,6 +370,7 @@ async def amake_request(
                 current = kwargs.get("timeout")
                 current = current if isinstance(current, (int, float)) else getattr(current, "total", None)
                 kwargs["timeout"] = min(current, admitted) if current and current > 0 else admitted
+        response = None
         try:
             response = await session.request(method, url, **kwargs)
             if policy:
@@ -383,6 +385,22 @@ async def amake_request(
                 if isawaitable(recorded):
                     await recorded
             raise
+        finally:
+            if response is not None and policy and policy[2] is not None:
+                # Decompressed bytes are conservative when the vendor meters wire bytes.
+                sizes = []
+                raw = getattr(getattr(response, "content", None), "total_bytes", None)
+                if isinstance(raw, int):
+                    sizes.append(raw)
+                try:
+                    header = response.headers.get("Content-Length")
+                    if header is not None:
+                        sizes.append(int(header))
+                except (ValueError, TypeError):
+                    pass
+                recorded = policy[2](max(sizes) if sizes else None)
+                if isawaitable(recorded):
+                    await recorded
     finally:
         if not with_session:
             await session.close()
@@ -466,10 +484,10 @@ def combine_certificates(cert: str, bundle: str | None = None) -> str:
     if not Path(cert).exists():
         raise FileNotFoundError(f"Certificate file '{cert}' not found")
 
-    if cert.split(".")[0].endswith("_combined"):
+    if cert.split(".", maxsplit=1)[0].endswith("_combined"):
         return cert
 
-    combined_cert = cert.split(".")[0] + "_combined." + cert.split(".")[1]
+    combined_cert = cert.split(".", maxsplit=1)[0] + "_combined." + cert.split(".")[1]
 
     if Path(combined_cert).exists():
         return combined_cert

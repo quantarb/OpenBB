@@ -163,3 +163,36 @@ def test_admission_remaining_time_bounds_http_timeout(monkeypatch):
     with request_policy({"financialmodelingprep.com"}, lambda: 2.5, lambda *_: None):
         asyncio.run(helpers.amake_request("https://financialmodelingprep.com/x", session=session, timeout=30))
     assert seen == [2.5]
+
+
+def test_response_size_observer_never_receives_url_and_counts_parse_failures(monkeypatch):
+    """Measure numeric bytes even when provider parsing fails."""
+    session = Session()
+    original = session.request
+
+    async def request(*args, **kwargs):
+        response = await original(*args, **kwargs)
+        response.content = SimpleNamespace(total_bytes=1234)
+        response.headers["Content-Length"] = "900"
+        return response
+
+    session.request = request
+
+    async def factory(**kwargs):
+        return session
+
+    async def malformed(*args):
+        raise ValueError("invalid fixture")
+
+    monkeypatch.setattr(helpers, "get_async_requests_session", factory)
+    sizes = []
+    with request_policy({"financialmodelingprep.com"}, lambda: 5, lambda *_: None, sizes.append):
+        with pytest.raises(ValueError):
+            asyncio.run(
+                helpers.amake_request(
+                    "https://financialmodelingprep.com/x?apikey=secret",
+                    session=session, response_callback=malformed,
+                )
+            )
+    assert sizes == [1234]
+    assert "secret" not in repr(sizes)

@@ -48,13 +48,13 @@ from openbb_fmp.models.government_trades import FMPGovernmentTradesFetcher
 from openbb_fmp.models.historical_dividends import FMPHistoricalDividendsFetcher
 from openbb_fmp.models.historical_employees import FMPHistoricalEmployeesFetcher
 from openbb_fmp.models.historical_eps import FMPHistoricalEpsFetcher
-from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
-from openbb_fmp.models.historical_ratings import FMPHistoricalRatingsFetcher
-from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
 from openbb_fmp.models.historical_industry_pe import FMPHistoricalIndustryPEFetcher
 from openbb_fmp.models.historical_industry_performance import FMPHistoricalIndustryPerformanceFetcher
+from openbb_fmp.models.historical_market_cap import FmpHistoricalMarketCapFetcher
+from openbb_fmp.models.historical_ratings import FMPHistoricalRatingsFetcher
 from openbb_fmp.models.historical_sector_pe import FMPHistoricalSectorPEFetcher
 from openbb_fmp.models.historical_sector_performance import FMPHistoricalSectorPerformanceFetcher
+from openbb_fmp.models.historical_splits import FMPHistoricalSplitsFetcher
 from openbb_fmp.models.income_statement import FMPIncomeStatementFetcher
 from openbb_fmp.models.income_statement_growth import FMPIncomeStatementGrowthFetcher
 from openbb_fmp.models.index_constituents import FMPIndexConstituentsFetcher
@@ -68,6 +68,7 @@ from openbb_fmp.models.nport_disclosure import FMPNportDisclosureFetcher
 from openbb_fmp.models.price_performance import FMPPricePerformanceFetcher
 from openbb_fmp.models.price_target import FMPPriceTargetFetcher
 from openbb_fmp.models.price_target_consensus import FMPPriceTargetConsensusFetcher
+from openbb_fmp.models.reported_financials import FMPReportedFinancialsFetcher
 from openbb_fmp.models.revenue_business_line import FMPRevenueBusinessLineFetcher
 from openbb_fmp.models.revenue_geographic import FMPRevenueGeographicFetcher
 from openbb_fmp.models.risk_premium import FMPRiskPremiumFetcher
@@ -153,6 +154,7 @@ stock market information (news, currencies, and stock prices).""",
         "RevenueBusinessLine": FMPRevenueBusinessLineFetcher,
         "RevenueGeographic": FMPRevenueGeographicFetcher,
         "RiskPremium": FMPRiskPremiumFetcher,
+        "ReportedFinancials": FMPReportedFinancialsFetcher,
         "ShareStatistics": FMPShareStatisticsFetcher,
         "TreasuryRates": FMPTreasuryRatesFetcher,
         "WorldNews": FMPWorldNewsFetcher,

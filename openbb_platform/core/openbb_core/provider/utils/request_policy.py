@@ -10,7 +10,7 @@ _state = SimpleNamespace(policy=None)
 
 
 @contextmanager
-def request_policy(hosts, before, after):
+def request_policy(hosts, before, after, on_response=None):
     """Install one policy across async worker threads, restoring on exit.
 
     ``after(status, retry_after)`` receives HTTP metadata before provider parsing.
@@ -20,7 +20,7 @@ def request_policy(hosts, before, after):
     with _lock:
         if _state.policy is not None:
             raise RuntimeError("A request policy is already installed")
-        _state.policy = (frozenset(hosts), before, after)
+        _state.policy = (frozenset(hosts), before, after, on_response)
     try:
         yield
     finally:
