@@ -70,7 +70,17 @@ class FMPReportedFinancialsFetcher(Fetcher[FMPReportedFinancialsQueryParams, lis
         query: FMPReportedFinancialsQueryParams, data: list[dict], **kwargs: Any
     ) -> list[FMPReportedFinancialsData]:
         """Keep period dates exactly as returned; do not impose disclosure lags."""
-        return [
-            FMPReportedFinancialsData.model_validate({**row, "raw_metadata": json.dumps(row, sort_keys=True)})
-            for row in data
-        ]
+        results = []
+        for row in data:
+            flat = {k: v for k, v in row.items() if k != "data"}
+            nested = row.get("data")
+            if nested is not None:
+                if not isinstance(nested, dict):
+                    raise ValueError("FMP raw financial data payload must be an object")
+                for key, value in nested.items():
+                    if key in flat and flat[key] != value:
+                        raise ValueError("FMP raw financial field collides with source metadata")
+                    flat[key] = value
+            flat["raw_metadata"] = json.dumps(row, sort_keys=True)
+            results.append(FMPReportedFinancialsData.model_validate(flat))
+        return results

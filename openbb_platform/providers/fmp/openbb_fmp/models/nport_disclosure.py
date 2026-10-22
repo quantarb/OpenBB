@@ -2,7 +2,10 @@
 
 # pylint: disable=unused-argument
 
-from datetime import date as dateType
+from datetime import (
+    date as dateType,
+    datetime,
+)
 from typing import Any
 
 from openbb_core.provider.abstract.fetcher import Fetcher
@@ -31,6 +34,7 @@ class FMPNportDisclosureData(NportDisclosureData):
         "country": "invCountry",
         "currency": "cur_cd",
         "as_of": "date",
+        "accepted_date": "acceptedDate",
         "is_restricted": "isRestrictedSec",
         "fair_value_level": "fairValLevel",
     }
@@ -39,6 +43,8 @@ class FMPNportDisclosureData(NportDisclosureData):
         description="The acceptance datetime of the filing.",
         default=None,
     )
+
+    accepted_date: datetime | None = Field(default=None, description="Original filing acceptance timestamp, unshifted.")
 
     @field_validator("weight", mode="before", check_fields=False)
     @classmethod
@@ -87,8 +93,8 @@ class FMPNportDisclosureFetcher(
     ) -> list:
         """Return the raw data from the FMP endpoint."""
         # pylint: disable=import-outside-toplevel
+        from openbb_core.app.model.abstract.error import OpenBBError
         from openbb_fmp.utils.helpers import get_data_many
-        from pandas import Timestamp
 
         api_key = credentials.get("fmp_api_key") if credentials else ""
         url = "https://financialmodelingprep.com/stable/funds/disclosure?"
@@ -98,16 +104,38 @@ class FMPNportDisclosureFetcher(
         else:
             url += f"symbol={query.symbol}"
 
-        now = Timestamp("now")
+        if query.year is None or query.quarter is None:
+            # Calendar quarter-1 is not necessarily reported yet. Use vendor availability.
+            from openbb_core.provider.utils.errors import EmptyDataError
 
-        if not query.year:
-            query.year = now.year
-        if not query.quarter:
-            if now.quarter == 1:
-                query.year -= 1
-                query.quarter = 4
-            else:
-                query.quarter = now.quarter - 1
+            dates_url = (
+                "https://financialmodelingprep.com/stable/funds/disclosure-dates?"
+                + (f"cik={query.symbol}" if query.symbol.isnumeric() else f"symbol={query.symbol}")
+                + f"&apikey={api_key}"
+            )
+            available = await get_data_many(dates_url, **kwargs)
+            candidates = []
+            for item in available:
+                if not isinstance(item, dict):
+                    raise OpenBBError("Invalid FMP disclosure-period availability response")
+                reported = item.get("date")
+                year, quarter = item.get("year"), item.get("quarter")
+                if (year is None or quarter is None) and reported:
+                    source_date = dateType.fromisoformat(str(reported)[:10])
+                    year, quarter = source_date.year, (source_date.month - 1) // 3 + 1
+                if year is None or quarter is None:
+                    raise OpenBBError("FMP availability record lacks a reporting year/quarter")
+                year, quarter = int(year), int(quarter)
+                if not 1 <= quarter <= 4:
+                    raise OpenBBError("Invalid FMP reporting quarter")
+                if query.year is not None and year != query.year:
+                    continue
+                if query.quarter is not None and quarter != query.quarter:
+                    continue
+                candidates.append((year, quarter))
+            if not candidates:
+                raise EmptyDataError("No vendor-reported N-PORT periods for this fund and requested scope")
+            query.year, query.quarter = max(candidates)
 
         url += f"&year={query.year}&quarter={query.quarter}&apikey={api_key}"
 
@@ -122,7 +150,7 @@ class FMPNportDisclosureFetcher(
         """Return the transformed data."""
         results: list[FMPNportDisclosureData] = []
         for d in data:
-            new_d = {k: v for k, v in d.items() if k not in ("cik", "acceptedDate")}
+            new_d = dict(d)
             results.append(FMPNportDisclosureData.model_validate(new_d))
 
-        return sorted(results, key=lambda x: (x.weight or 0), reverse=True)
+        return sorted(results, key=lambda x: x.weight or 0, reverse=True)

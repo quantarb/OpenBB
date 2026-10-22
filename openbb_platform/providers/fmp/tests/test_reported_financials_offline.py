@@ -36,3 +36,18 @@ async def test_full_raw_route_uses_bounded_query_and_existing_helper(monkeypatch
 def test_default_statement_family_matches_standard_sdk_default():
     """Preserve the existing route's default balance-sheet selection."""
     assert Model.transform_query({"symbol": "AAPL"}).statement_type == "balance"
+
+
+def test_nested_stable_statement_payload_preserves_numbers_zeros_and_raw_shape():
+    """Stable as-reported responses wrap raw XBRL tags in a data object."""
+    q = Model.transform_query({"symbol": "AAPL", "limit": 2})
+    raw = {
+        "date": "2025-09-30",
+        "period": "FY",
+        "calendarYear": "2025",
+        "data": {"Assets": 123, "Gain": 0, "Liabilities": 50},
+    }
+    row = Model.transform_data(q, [raw])[0].model_dump()
+    assert row["Assets"] == 123 and row["Gain"] == 0
+    assert "data" not in row
+    assert json.loads(row["raw_metadata"]) == raw
