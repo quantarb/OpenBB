@@ -13,6 +13,7 @@ from openbb_fmp.models.calendar_splits import FMPCalendarSplitsFetcher
 from openbb_fmp.models.cash_flow import FMPCashFlowStatementFetcher
 from openbb_fmp.models.cash_flow_growth import FMPCashFlowStatementGrowthFetcher
 from openbb_fmp.models.company_filings import FMPCompanyFilingsFetcher
+from openbb_fmp.models.latest_financial_statements import FMPLatestFinancialStatementsFetcher
 from openbb_fmp.models.company_news import FMPCompanyNewsFetcher
 from openbb_fmp.models.crypto_historical import FMPCryptoHistoricalFetcher
 from openbb_fmp.models.crypto_search import FMPCryptoSearchFetcher
@@ -96,6 +97,7 @@ stock market information (news, currencies, and stock prices).""",
         "CashFlowStatement": FMPCashFlowStatementFetcher,
         "CashFlowStatementGrowth": FMPCashFlowStatementGrowthFetcher,
         "CompanyFilings": FMPCompanyFilingsFetcher,
+        "LatestFinancialStatements": FMPLatestFinancialStatementsFetcher,
         "CompanyNews": FMPCompanyNewsFetcher,
         "CryptoHistorical": FMPCryptoHistoricalFetcher,
         "CryptoSearch": FMPCryptoSearchFetcher,

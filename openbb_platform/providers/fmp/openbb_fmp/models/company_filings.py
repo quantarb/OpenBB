@@ -46,7 +46,7 @@ class FMPCompanyFilingsQueryParams(CompanyFilingsQueryParams):
         default=0,
         description="Page number for paginated results. Max page is 100.",
         le=100,
-        gt=0,
+        ge=0,
     )
 
 

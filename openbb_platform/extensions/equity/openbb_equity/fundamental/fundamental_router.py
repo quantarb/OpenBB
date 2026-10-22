@@ -547,3 +547,14 @@ async def esg_score(
 ) -> OBBject:
     """Get ESG (Environmental, Social, and Governance) scores from company disclosures."""
     return await OBBject.from_query(Query(**locals()))
+
+
+@router.command(model="LatestFinancialStatements")
+async def latest_statements(
+    cc: CommandContext,
+    provider_choices: ProviderChoices,
+    standard_params: StandardParams,
+    extra_params: ExtraParams,
+) -> OBBject:
+    """Discover one page of published statement periods without fetching statements."""
+    return await OBBject.from_query(Query(**locals()))
