@@ -171,7 +171,7 @@ class FMPGovernmentTradesFetcher(
         async def get_symbol_chamber(endpoint: str, symbol: str):
             """Get all pages for one symbol and chamber."""
             page = 0
-            page_limit = 100
+            page_limit = min(100, query.limit) if query.limit else 100
             seen = set()
 
             while True:
@@ -195,7 +195,7 @@ class FMPGovernmentTradesFetcher(
                         seen.add(fs)
                         results.append(entry)
 
-                if len(processed_list) < page_limit:
+                if (query.limit and len(seen) >= query.limit) or len(processed_list) < page_limit:
                     break
                 page += 1
 
