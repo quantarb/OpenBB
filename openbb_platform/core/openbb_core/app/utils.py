@@ -58,6 +58,31 @@ def basemodel_to_df(
     return df
 
 
+def basemodel_to_polars(
+    data: list[Data] | Data,
+    index: str | None = None,
+):
+    """Convert serialized OpenBB data directly to a Polars DataFrame."""
+    # pylint: disable=import-outside-toplevel
+    import polars as pl
+
+    if isinstance(data, list):
+        records = [d.model_dump(exclude_none=True, exclude_unset=True) for d in data]
+        frame = pl.DataFrame(records, infer_schema_length=None)
+    else:
+        payload = data.model_dump(exclude_none=True, exclude_unset=True)
+        try:
+            frame = pl.DataFrame(payload, orient="col")
+        except Exception:
+            frame = pl.DataFrame([payload], infer_schema_length=None)
+
+    if "is_multiindex" in frame.columns:
+        frame = frame.drop(["is_multiindex", "multiindex_names"])
+    if index and index in frame.columns:
+        frame = frame.sort(index)
+    return frame
+
+
 def df_to_basemodel(
     df: Union["DataFrame", "Series"], index: bool = False
 ) -> list[Data]:
