@@ -5,10 +5,12 @@ import json
 import os
 import re
 from threading import Lock
+from contextvars import ContextVar
 from urllib.parse import parse_qsl,urlsplit
 
 _lock=Lock()
-_active=None
+_active=ContextVar('openbb_request_journal',default=None)
+_required_hosts={}
 _SECRET=re.compile(r'(?:api[_-]?key|access[_-]?key|secret|token|password|authorization|credential|signature)',re.I)
 
 
@@ -45,15 +47,23 @@ def request_identity(url,method='GET',params=None):
 
 @contextmanager
 def request_journal(hosts,journal):
-    global _active
+    if _active.get() is not None:raise RuntimeError('A request journal is already installed in this context')
+    hosts=frozenset(hosts)
     with _lock:
-        if _active is not None:raise RuntimeError('A request journal is already installed')
-        _active=(frozenset(hosts),journal)
+        for host in hosts:_required_hosts[host]=_required_hosts.get(host,0)+1
+    token=_active.set((hosts,journal))
     try:yield
     finally:
-        with _lock:_active=None
+        _active.reset(token)
+        with _lock:
+            for host in hosts:
+                _required_hosts[host]-=1
+                if not _required_hosts[host]:del _required_hosts[host]
 
 
 def journal_for(url):
-    state=_active
-    return state[1] if state and urlsplit(url).hostname in state[0] else None
+    host=urlsplit(url).hostname;state=_active.get()
+    if state and host in state[0]:return state[1]
+    with _lock:
+        if host in _required_hosts:raise RuntimeError('Request lost its required journal context; HTTP is blocked')
+    return None
